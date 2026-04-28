@@ -1,0 +1,32 @@
+# Virtual environments
+_app/venv/
+_app/venv_win/
+_app/venv_linux/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# User data — models, thumbnails, source zips
+models/
+
+# User configuration (generated at runtime from defaults)
+statuses.json
+categories.json
+file_statuses.json
+
+# Logs
+*.log
+
+# Old archives
+*.7z
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D Print Library</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<style>
+  body { background: #0f1117; color: #e0e0e0; min-height: 100vh; }
+  .nav-link-custom { color: #888; font-size: .85rem; text-decoration: none; padding: 4px 12px; border-radius: 6px; }
+  .nav-link-custom:hover { color: #fff; background: #1a1d27; }
+  .nav-link-custom.active { color: #fff; background: #1e2a4a; border: 1px solid #4f7fff; }
+  .mod-card { cursor: pointer; background: #1a1d27; border: 1px solid #2a2d3e; transition: border-color .15s, transform .15s; color: #e0e0e0; }
+  .mod-card:hover { border-color: #4f7fff; transform: translateY(-2px); }
+  .mod-card .mod-title { color: #ffffff !important; }
+  .modal-content { background: #1a1d27; border: 1px solid #2a2d3e; }
+  .modal-header, .modal-footer { border-color: #2a2d3e; }
+  .form-control, .form-select { background: #0f1117; border-color: #2a2d3e; color: #e0e0e0; }
+  .form-control:focus, .form-select:focus { background: #0f1117; color: #e0e0e0; border-color: #4f7fff; box-shadow: none; }
+  .form-control::placeholder { color: #555; }
+  textarea.form-control { resize: vertical; }
+  #viewer { width: 100%; height: 300px; background: #080a10; border-radius: 8px; display: block; }
+  .file-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #0f1117; border-radius: 6px; margin-bottom: 5px; flex-wrap: wrap; }
+  .file-name { font-family: monospace; font-size: .82rem; flex: 1; cursor: pointer; color: #ccc; min-width: 0; }
+  .file-name:hover { color: #4f7fff; }
+  .file-name.active { color: #4f7fff; }
+  .file-note-row { width: 100%; display: flex; gap: 6px; margin-top: 4px; }
+  .file-needed-sel, .file-slicer-sel { font-size: .72rem; padding: 1px 4px; width: auto; flex-shrink: 0; }
+  .file-note-in { font-size: .75rem; flex: 1; background: #0a0c12; border-color: #2a2d3e; color: #ccc; }
+  .file-note-in::placeholder { color: #444; }
+  .btn-add-note { background: none; border: none; color: #555; font-size: .72rem; cursor: pointer; padding: 0 2px; flex-shrink: 0; }
+  .btn-add-note:hover { color: #4f7fff; }
+  .status-section { margin-bottom: 1.25rem; }
+  .status-section-header { display:flex; align-items:center; gap:8px; padding:7px 12px; border-radius:6px; border-left:4px solid; margin-bottom:6px; cursor:default; user-select:none; }
+  .status-section-header.drag-over { outline:2px dashed; outline-offset:2px; background:rgba(79,127,255,.12) !important; }
+  .status-section-body { display:flex; flex-direction:column; gap:6px; min-height:40px; }
+  .status-section-body.drag-over { outline:1px dashed #2a2d3e; border-radius:6px; }
+  .cat-badge-STL { background:#1f3d2a !important; color:#6ee7b7; font-size:.68rem; }
+  .badge-origin-mine { background:#2d1f5e !important; color:#c4b5fd; font-size:.65rem; }
+  .slicer-icon { display:inline-flex; align-items:center; justify-content:center; padding:2px 6px; border-radius:4px; font-size:.63rem; font-weight:700; letter-spacing:.02em; background:#141720; border:1px solid #1e2030; color:#333; cursor:default; transition:color .2s,border-color .2s; }
+  .slicer-icon.available { color:#c0c8e0; border-color:#2a2d3e; }
+  .variant-picker { position:relative; flex-shrink:0; }
+  .variant-picker-btn { background:#0f1117; border:1px solid #2a2d3e; color:#ccc; border-radius:4px; padding:1px 10px; font-size:.72rem; cursor:pointer; white-space:nowrap; min-width:90px; text-align:left; }
+  .variant-picker-btn:hover { border-color:#4f7fff; }
+  .variant-picker-list { display:none; position:absolute; top:100%; left:0; z-index:3000; background:#1a1d27; border:1px solid #2a2d3e; border-radius:6px; min-width:100%; box-shadow:0 4px 16px rgba(0,0,0,.5); overflow:hidden; margin-top:2px; }
+  .variant-picker-list.open { display:block; }
+  .variant-picker-opt { padding:5px 12px; font-size:.78rem; color:#ccc; cursor:pointer; white-space:nowrap; }
+  .variant-picker-opt:hover { background:#0d1a35; color:#fff; }
+  .group-expand-strip { display:none; flex-wrap:wrap; gap:8px; padding:8px 4px 4px; border-top:1px solid #1e2030; width:100%; margin-top:6px; }
+  .group-expand-strip.open { display:flex; }
+  .group-thumb-tile { text-align:center; cursor:pointer; border-radius:6px; padding:3px; border:2px solid transparent; transition:border-color .15s; }
+  .group-thumb-tile:hover { border-color:#4f7fff88; }
+  .group-thumb-tile.active { border-color:#4f7fff; background:#0d1a35; }
+  .group-thumb-tile img,.group-thumb-tile .tile-ph { width:72px; height:72px; object-fit:cover; border-radius:4px; background:#080a10; display:block; }
+  .group-thumb-tile .tile-ph { display:flex; align-items:center; justify-content:center; color:#2a2d3e; font-size:1.2rem; }
+  .group-thumb-tile .tile-label { font-family:monospace; font-size:.62rem; color:#888; margin-top:3px; max-width:72px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #thumbFloat { display:none; position:fixed; z-index:9999; pointer-events:none; background:#1a1d27; border:1px solid #2a2d3e; border-radius:8px; padding:5px; box-shadow:0 6px 24px rgba(0,0,0,.6); }
+  #thumbFloat img { width:140px; height:140px; object-fit:cover; border-radius:6px; display:block; }
+  .detail-section-body.collapsed { display:none; }
+  .detail-section-toggle { cursor:pointer; font-size:.7rem; color:#555; user-select:none; }
+  .detail-section-toggle:hover { color:#fff; }
+  .fstrip-needed { color: #22c55e; font-size: .6rem; margin-top: 2px; }
+  .fstrip-optional { color: #f59e0b; font-size: .6rem; margin-top: 2px; }
+  .fstrip-skip { color: #ef4444; font-size: .6rem; margin-top: 2px; text-decoration: line-through; }
+  body.docs-panel-wide .file-slicer-sel { display: none !important; }
+  .source-file { font-family: monospace; font-size: .8rem; color: #888; }
+  .btn-orca { font-size: .72rem; padding: 2px 8px; white-space: nowrap; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .status-drag { cursor: grab; color: #555; user-select: none; padding: 0 2px; font-size: 1rem; line-height: 1; }
+  .status-drag:active { cursor: grabbing; }
+  .status-color-pick { width: 28px; height: 28px; padding: 2px; border: 1px solid #2a2d3e; border-radius: 4px; cursor: pointer; background: none; flex-shrink: 0; }
+  .status-edit-row.drag-over { border-top: 2px solid #4f7fff; }
+  .cat-badge-FDM { background: #1e3a5f !important; color: #7dd3fc; font-size: .68rem; }
+  .cat-badge-SLA { background: #3b1f5e !important; color: #c4b5fd; font-size: .68rem; }
+  .filter-btn { background: #1a1d27; border: 1px solid #2a2d3e; color: #aaa; font-size: .8rem; }
+  .filter-btn.active { border-color: #4f7fff; color: #fff; background: #1e2a4a; }
+  .badge-pdf { background:#2d1f00 !important; color:#fbbf24; font-size:.65rem; }
+  #docsBd { display:none; position:fixed; inset:0; background:rgba(0,0,0,.25); z-index:2000; pointer-events:none; }
+  #docsBd.open { display:block; }
+  #docsPanel { position:fixed; top:0; right:0; width:50vw; min-width:280px; max-width:95vw; height:100vh; background:#1a1d27; border-left:1px solid #2a2d3e; z-index:2001; display:flex; flex-direction:row; transform:translateX(100%); transition:transform .3s ease; box-shadow:-6px 0 32px rgba(0,0,0,.5); }
+  #docsPanel.open { transform:translateX(0); }
+  #docsPanel.collapsed { transform:translateX(calc(100% - 28px)); }
+  body.docs-panel-open #modModal { right:var(--docs-panel-w,50vw); width:auto; }
+  body.docs-panel-open .modal-backdrop { width:calc(100% - var(--docs-panel-w,50vw)); }
+  #docsDragHandle { width:28px; flex-shrink:0; background:#141720; border-right:1px solid #2a2d3e; cursor:ew-resize; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; user-select:none; transition:background .15s; }
+  #docsDragHandle:hover { background:#1a2040; }
+  #docsCollapseBtn,#docsSnapBtn,#docsThreshBtn { background:none; border:1px solid #2a2d3e; color:#888; border-radius:4px; width:20px; cursor:pointer; font-size:.75rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; transition:color .15s,border-color .15s; }
+  #docsCollapseBtn { height:36px; }
+  #docsSnapBtn,#docsThreshBtn { height:24px; }
+  #docsCollapseBtn:hover,#docsSnapBtn:hover,#docsThreshBtn:hover { color:#fff; border-color:#4f7fff; }
+  .open-with-wrapper { display:none; align-items:center; gap:6px; }
+  body.docs-panel-wide .open-with-wrapper { display:flex; }
+  .btn-render-thumb { background:none; border:1px solid #2a2d3e; color:#888; border-radius:4px; padding:3px 8px; cursor:pointer; font-size:.72rem; flex-shrink:0; align-self:flex-start; white-space:nowrap; transition:color .15s,border-color .15s; }
+  .btn-render-thumb:hover { color:#fff; border-color:#4f7fff; }
+  .btn-render-thumb:disabled { opacity:.5; cursor:default; }
+  .mod-render-progress { width:100%; height:7px; background:#141720; border-radius:4px; margin-top:8px; flex-basis:100%; overflow:hidden; box-shadow:inset 0 1px 3px rgba(0,0,0,.4); }
+  .mod-render-bar { height:100%; border-radius:4px; width:0%; transition:width .5s ease; background:linear-gradient(90deg,#3b82f6,#8b5cf6,#ec4899,#4f7fff); background-size:300% 100%; animation:renderShimmer 1.8s linear infinite; box-shadow:0 0 10px #4f7fff99; }
+  @keyframes renderShimmer { 0%{background-position:100% 0} 100%{background-position:-200% 0} }
+  #docsPanelContent { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+  #docsPanelFrame { flex:1; border:0; background:#fff; }
+  .btn-slicer-default { display:none !important; }
+  body.docs-panel-wide .modal-dialog.modal-lg { max-width:320px !important; }
+  body.docs-panel-wide #viewer { height:140px !important; }
+  body.docs-panel-wide .btn-orca { display:none !important; }
+  body.docs-panel-wide .btn-slicer-default { display:inline-block !important; }
+  body.docs-panel-wide .col-sm-5, body.docs-panel-wide .col-sm-7 { width:100%; flex:0 0 100%; max-width:100%; }
+  #orca-warning { display: none; }
+  #topBar { position:fixed; top:0; left:0; height:3px; width:0%; background:#4f7fff; z-index:10000; transition:width .25s ease,opacity .5s ease; opacity:0; pointer-events:none; }
+  #topBar.active { opacity:1; }
+  #topBarGlow { position:fixed; top:0; right:0; width:80px; height:3px; background:linear-gradient(to left,transparent,#4f7fff); z-index:10001; opacity:0; transition:opacity .5s; pointer-events:none; }
+  #topBarGlow.active { opacity:1; }
+  #dropOverlay { display:none; position:fixed; inset:0; background:rgba(15,17,23,.88); border:3px dashed #4f7fff; z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:10px; }
+  #dropOverlay.active { display:flex; }
+  .drop-zone { border:2px dashed #2a2d3e; border-radius:8px; transition:border-color .15s,background .15s; }
+  .drop-zone.drag-over { border-color:#4f7fff; background:#0d1a35; }
+  .drop-zone-inner { padding:18px; text-align:center; cursor:pointer; }
+  .drop-zone-inner:hover { background:#1a2035; border-radius:6px; }
+  .drop-icon { font-size:1.8rem; margin-bottom:4px; }
+  .layout-btn { background:#1a1d27; border:1px solid #2a2d3e; color:#aaa; font-size:.85rem; line-height:1; padding:3px 9px; }
+  .layout-btn.active { border-color:#4f7fff; color:#fff; background:#1e2a4a; }
+  .detail-row { display:flex; align-items:flex-start; flex-wrap:wrap; gap:14px; padding:10px 12px; background:#1a1d27; border:1px solid #2a2d3e; border-radius:8px; cursor:pointer; transition:border-color .15s; }
+  .detail-row:hover { border-color:#4f7fff; }
+  .detail-thumb { width:80px; height:80px; object-fit:cover; border-radius:6px; flex-shrink:0; background:#080a10; }
+  .detail-thumb-placeholder { width:80px; height:80px; border-radius:6px; background:#080a10; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#2a2d3e; font-size:1.5rem; }
+  .file-thumb-strip { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .file-thumb-item { flex-shrink:0; text-align:center; }
+  .file-thumb-img { width:72px; height:72px; object-fit:cover; border-radius:5px; background:#080a10; display:block; border:1px solid #2a2d3e; transition:border-color .15s; }
+  .file-thumb-img:hover { border-color:#4f7fff; }
+  .file-thumb-ph { width:72px; height:72px; border-radius:5px; background:#080a10; border:1px solid #2a2d3e; display:flex; align-items:center; justify-content:center; color:#2a2d3e; font-size:1.1rem; }
+  .file-thumb-label { font-family:monospace; font-size:.61rem; color:#555; margin-top:3px; width:72px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div id="topBar"></div>
+<div id="topBarGlow"></div>
+
+<div class="container-fluid py-4 px-4" style="max-width:1600px">
+  <div class="d-flex align-items-start justify-content-between mb-3">
+    <div class="d-flex align-items-center gap-3">
+      <h4 class="mb-0 fw-bold">3D Print Library</h4>
+      <div id="watch-indicator" class="small" style="display:none;cursor:pointer;color:#14b8a6;font-weight:500" title="Watch folder active" onclick="showWatchInfo()">📂 <span id="watch-label">0 auto-imported</span></div>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+      <div id="debug-warning" class="text-danger small" style="display:none;cursor:pointer" onclick="showDebug()">⚠ Library not found — click for details</div>
+      <div class="d-flex gap-1 align-items-center">
+        <span class="slicer-icon" id="icon-orca"     title="OrcaSlicer — not detected (set ORCA_PATH)">Orca</span>
+        <span class="slicer-icon" id="icon-cura"     title="Cura — not detected (set CURA_PATH)">Cura</span>
+        <span class="slicer-icon" id="icon-bambu"    title="Bambu Studio — not detected (set BAMBU_PATH)">Bambu</span>
+        <span class="slicer-icon" id="icon-creality" title="Creality Print — not detected (set CREALITY_PATH)">Cr.</span>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" id="generateBtn">Generate Thumbnails</button>
+      <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#statusesModal">⚙ Statuses</button>
+      <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importModal">+ Import Zip</button>
+    </div>
+  </div>
+
+  <!-- Thumbnail generation progress panel -->
+  <div id="genPanel" style="display:none;background:#1a1d27;border:1px solid #2a2d3e" class="mb-3 p-3 rounded">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <span class="small fw-semibold" id="genLabel">Starting...</span>
+      <span class="small text-muted" id="genCount"></span>
+    </div>
+    <div class="progress" style="height:8px;background:#2a2d3e;border-radius:4px">
+      <div id="genBar" class="progress-bar" style="width:0%;background:#4f7fff;border-radius:4px;transition:width .3s ease"></div>
+    </div>
+  </div>
+  <div id="genStatus" class="text-muted small mb-2" style="display:none"></div>
+
+  <div id="filterRow" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+    <button class="btn btn-sm filter-btn active" data-filter="all">All</button>
+    <span id="catFilterBtns" class="d-flex gap-2 flex-wrap"></span>
+    <button class="btn btn-sm btn-outline-secondary p-0" id="catGearBtn" data-bs-toggle="modal" data-bs-target="#categoriesModal" style="width:22px;height:22px;font-size:.7rem;line-height:1;border-radius:4px" title="Manage categories">⚙</button>
+    <div style="width:1px;height:16px;background:#2a2d3e"></div>
+    <button class="btn btn-sm filter-btn" id="filterMine" data-origin="my-design">✏ Mine</button>
+    <div class="ms-2 d-flex align-items-center gap-2">
+      <input type="search" class="form-control form-control-sm" id="searchBox" placeholder="Search..." style="width:180px">
+    </div>
+    <div class="d-flex gap-1 ms-2">
+      <button class="btn btn-sm layout-btn" id="layoutGrid" title="Grid view">⊞</button>
+      <button class="btn btn-sm layout-btn active" id="layoutDetail" title="Detail view">☰</button>
+    </div>
+    <span class="ms-auto text-muted small" id="countLabel"></span>
+  </div>
+
+  <div class="row g-3" id="cards"></div>
+</div>
+
+<!-- Mod detail modal -->
+<div class="modal fade" id="modModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2 px-3">
+        <div>
+          <h6 class="modal-title fw-semibold mb-0" id="modTitle"></h6>
+          <span class="badge rounded-pill mt-1" id="modCatBadge"></span>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary me-2" id="copyPathBtn" onclick="copyModPath()" title="Copy folder path — paste into OrcaSlicer's save dialog to store your project here">📋</button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-3 py-3">
+        <canvas id="viewer"></canvas>
+
+        <div id="docsSection" style="display:none">
+          <div class="mt-3 mb-1 text-muted" style="font-size:.8rem">DOCUMENTATION</div>
+          <div id="docsList"></div>
+        </div>
+
+        <div class="mt-3 mb-1 d-flex align-items-center gap-2">
+          <span class="text-muted" style="font-size:.8rem">PRINTABLE FILES</span>
+          <button class="btn-add-note" data-bs-toggle="modal" data-bs-target="#fileStatusesModal" onclick="event.stopPropagation()" title="Manage part status flags — add, rename, recolor or reorder the Needed / Optional labels" style="font-size:.7rem;padding:0 4px">⚙ Status Flags</button>
+          <div class="open-with-wrapper ms-auto">
+            <span class="text-muted" style="font-size:.75rem">Open with</span>
+            <select id="defaultSlicerSelect" class="form-select form-select-sm" style="width:auto;font-size:.75rem">
+              <option value="orca">OrcaSlicer</option>
+              <option value="cura">Cura</option>
+              <option value="bambu">Bambu Studio</option>
+              <option value="creality">Creality Print</option>
+            </select>
+          </div>
+        </div>
+        <div id="fileList"></div>
+
+        <div id="sourceSection" style="display:none">
+          <div class="mt-3 mb-1 text-muted" style="font-size:.8rem">SOURCE</div>
+          <div id="sourceList"></div>
+        </div>
+
+        <div class="row g-2 mt-3">
+          <div class="col-sm-4">
+            <label class="form-label small text-muted mb-1">Status</label>
+            <select class="form-select form-select-sm" id="statusSelect"></select>
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label small text-muted mb-1">Origin</label>
+            <select class="form-select form-select-sm" id="originSelect">
+              <option value="downloaded">↓ Downloaded</option>
+              <option value="my-design">✏ My Design</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label small text-muted mb-1">Source URL</label>
+            <div class="input-group input-group-sm">
+              <input type="url" class="form-control" id="sourceUrl" placeholder="https://www.printables.com/...">
+              <a id="sourceLink" href="#" target="_blank" class="btn btn-outline-secondary" style="display:none">&#8599;</a>
+            </div>
+          </div>
+        </div>
+        <div class="mt-2">
+          <label class="form-label small text-muted mb-1">Notes</label>
+          <textarea class="form-control form-control-sm" id="notesArea" rows="2" placeholder="Print settings, observations, what worked..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer py-2 px-3">
+        <button class="btn btn-sm btn-primary" id="saveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drop overlay -->
+<div id="dropOverlay">
+  <div style="font-size:3rem">📦</div>
+  <div class="fw-semibold" style="font-size:1.1rem;color:#fff">Drop zip to import</div>
+</div>
+
+<!-- Import modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2 px-3">
+        <h6 class="modal-title fw-semibold mb-0">Import Zip</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-3 py-3">
+        <div class="row g-2 mb-3">
+          <div class="col-4">
+            <label class="form-label small text-muted mb-1">Category</label>
+            <select class="form-select form-select-sm" id="importCategory">
+              <option value="FDM">FDM</option>
+              <option value="SLA">SLA</option>
+              <option value="STL">STL</option>
+            </select>
+          </div>
+          <div class="col-8">
+            <label class="form-label small text-muted mb-1">Folder Name</label>
+            <input type="text" class="form-control form-control-sm" id="importName" placeholder="auto-filled from zip">
+          </div>
+        </div>
+        <div class="drop-zone mb-2" id="modalDropZone">
+          <input type="file" id="importFile" accept=".zip,.stl,.3mf" style="display:none">
+          <div class="drop-zone-inner" onclick="document.getElementById('importFile').click()">
+            <div class="drop-icon">📦</div>
+            <div class="small">Drop zip here or <span style="color:#4f7fff">browse</span></div>
+            <div class="text-muted mt-1" id="selectedFileName" style="font-size:.75rem"></div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 my-2">
+          <div style="flex:1;height:1px;background:#2a2d3e"></div>
+          <span class="text-muted" style="font-size:.75rem">OR BATCH</span>
+          <div style="flex:1;height:1px;background:#2a2d3e"></div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">Batch import — select multiple zips or a whole folder</label>
+          <div class="d-flex gap-2">
+            <input type="file" id="batchFilesInput" multiple accept=".zip" style="display:none">
+            <input type="file" id="batchFolderInput" style="display:none" webkitdirectory>
+            <button class="btn btn-sm btn-outline-secondary w-50" onclick="document.getElementById('batchFilesInput').click()">Select Zips</button>
+            <button class="btn btn-sm btn-outline-secondary w-50" onclick="document.getElementById('batchFolderInput').click()">Select Folder</button>
+          </div>
+        </div>
+        <div id="batchPanel" style="display:none;background:#141720;border:1px solid #2a2d3e" class="mb-2 p-2 rounded">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="small text-truncate" id="batchLabel" style="max-width:75%"></span>
+            <span class="small text-muted" id="batchCount"></span>
+          </div>
+          <div class="progress" style="height:5px;background:#2a2d3e;border-radius:3px">
+            <div id="batchBar" class="progress-bar" style="width:0%;background:#4f7fff;border-radius:3px;transition:width .2s ease"></div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 my-2">
+          <div style="flex:1;height:1px;background:#2a2d3e"></div>
+          <span class="text-muted" style="font-size:.75rem">OR URL</span>
+          <div style="flex:1;height:1px;background:#2a2d3e"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small text-muted mb-1">Download from URL <span class="text-muted">(direct .zip or Printables model link)</span></label>
+          <div class="input-group input-group-sm">
+            <input type="url" class="form-control" id="importDownloadUrl" placeholder="https://.../model_files.zip  or  printables.com/model/...">
+            <button class="btn btn-outline-secondary" id="fetchBtn" type="button">Fetch</button>
+          </div>
+        </div>
+        <div>
+          <label class="form-label small text-muted mb-1">Source page URL <span class="text-muted">(paste Printables URL here to auto-fill above)</span></label>
+          <input type="url" class="form-control form-control-sm" id="importUrl" placeholder="https://www.printables.com/...">
+        </div>
+        <div id="importStatus" class="mt-2 small"></div>
+      </div>
+      <div class="modal-footer py-2 px-3">
+        <button class="btn btn-sm btn-primary" id="importBtn">Import File</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Thumbnail generation -->
+<script>
+(function() {
+  var genBtn    = document.getElementById('generateBtn');
+  var genPanel  = document.getElementById('genPanel');
+  var genBar    = document.getElementById('genBar');
+  var genLabel  = document.getElementById('genLabel');
+  var genCount  = document.getElementById('genCount');
+  var genStatus = document.getElementById('genStatus');
+  var topBar    = document.getElementById('topBar');
+  var topGlow   = document.getElementById('topBarGlow');
+
+  function setTopBar(pct) { topBar.style.width=pct+'%'; topBar.classList.add('active'); topGlow.classList.add('active'); }
+  function finishTopBar() { setTopBar(100); setTimeout(function(){ topBar.classList.remove('active'); topGlow.classList.remove('active'); topBar.style.width='0%'; },600); }
+
+  function showGenPanel(pct, label, count) {
+    genPanel.style.display='block';
+    genBar.style.width=pct+'%';
+    genLabel.textContent=label;
+    genCount.textContent=count;
+    setTopBar(Math.max(pct, 2));
+  }
+
+  function hideGenPanel(summary) {
+    finishTopBar();
+    setTimeout(function() {
+      genPanel.style.display='none';
+      if (summary) { genStatus.textContent=summary; genStatus.style.display='block'; }
+    }, 2000);
+  }
+
+  var polling = false;
+  function schedulePoll() {
+    setTimeout(async function() {
+      try {
+        var r = await fetch('/api/generate-thumbnails/status');
+        var d = await r.json();
+        if (d.total > 0) {
+          var pct = Math.round((d.done / d.total) * 100);
+          showGenPanel(pct,
+            d.running ? ('Rendering: ' + d.current) : ('Done — ' + (d.total - d.errors.length) + ' / ' + d.total + ' rendered'),
+            d.done + ' / ' + d.total);
+        }
+        if (d.running) {
+          schedulePoll();
+        } else {
+          polling = false;
+          genBtn.disabled = false;
+          if (d.total > 0) hideGenPanel((d.total - d.errors.length) + ' / ' + d.total + ' thumbnails rendered');
+        }
+      } catch(e) { schedulePoll(); }
+    }, 800);
+  }
+
+  genBtn.addEventListener('click', async function() {
+    genBtn.disabled = true;
+    genStatus.style.display = 'none';
+    showGenPanel(0, 'Starting...', '');
+    try {
+      var r = await fetch('/api/generate-thumbnails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: false })
+      });
+      if (!r.ok) throw new Error('Server error ' + r.status);
+      if (!polling) { polling = true; schedulePoll(); }
+    } catch(e) {
+      showGenPanel(0, 'Error: ' + e.message, '');
+      genBtn.disabled = false;
+    }
+  });
+
+  // Resume if a job is already running when the page loads
+  fetch('/api/generate-thumbnails/status').then(function(r) { return r.json(); }).then(function(d) {
+    if (d.running) {
+      genBtn.disabled = true;
+      var pct = d.total > 0 ? Math.round((d.done / d.total) * 100) : 0;
+      showGenPanel(pct, 'Rendering: ' + d.current, d.done + ' / ' + d.total);
+      if (!polling) { polling = true; schedulePoll(); }
+    }
+  });
+})();
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+window._detailThumbErr = el => { el.outerHTML = '<div class="detail-thumb-placeholder">&#9651;</div>'; };
+window._fileThumbErr   = el => { el.outerHTML = '<div class="file-thumb-ph">&#9651;</div>'; };
+window._tileThumbErr   = el => { el.outerHTML = '<div class="tile-ph">&#9651;</div>'; };
+
+// ── Floating thumbnail preview ─────────────────────────────────────────────
+const _tf = document.getElementById('thumbFloat');
+const _tfi = document.getElementById('thumbFloatImg');
+window._showThumbPreview = function(file, e) {
+  if (!activeMod) return;
+  _tfi.src = `/api/mods/${encodeURIComponent(activeMod.name)}/thumbs/${encodeURIComponent(file)}`;
+  _tfi.onerror = () => { _tf.style.display = 'none'; };
+  _tfi.onload  = () => { _tf.style.display = ''; };
+  _positionFloatPreview(e);
+};
+window._hideThumbPreview = function() { _tf.style.display = 'none'; };
+window._positionFloatPreview = function(e) {
+  const x = Math.min(e.clientX + 18, window.innerWidth  - 158);
+  const y = Math.max(10, Math.min(e.clientY - 70, window.innerHeight - 158));
+  _tf.style.left = x + 'px';
+  _tf.style.top  = y + 'px';
+};
+
+// ── Variant picker ─────────────────────────────────────────────────────────
+window.toggleVariantPicker = function(btn) {
+  const list = btn.nextElementSibling;
+  const wasOpen = list.classList.contains('open');
+  document.querySelectorAll('.variant-picker-list.open').forEach(l => l.classList.remove('open'));
+  if (!wasOpen) list.classList.add('open');
+  _hideThumbPreview();
+};
+document.addEventListener('click', e => {
+  if (!e.target.closest('.variant-picker'))
+    document.querySelectorAll('.variant-picker-list.open').forEach(l => l.classList.remove('open'));
+});
+
+window.selectVariantFromPicker = function(file, variant, pickerEl) {
+  pickerEl.dataset.activeFile = file;
+  pickerEl.querySelector('.variant-picker-btn').textContent = variant + ' ▾';
+  pickerEl.querySelector('.variant-picker-list').classList.remove('open');
+  _hideThumbPreview();
+  _applyVariantToRow(file, pickerEl.closest('.file-item'));
+};
+
+window.toggleGroupExpand = function(btn) {
+  const strip = btn.closest('.file-item').querySelector('.group-expand-strip');
+  const open  = strip.classList.toggle('open');
+  btn.textContent = open ? '⊟' : '⊞';
+};
+
+window.selectVariantFromTile = function(file, variant, tileEl) {
+  const item = tileEl.closest('.file-item');
+  item.querySelectorAll('.group-thumb-tile').forEach(t => t.classList.remove('active'));
+  tileEl.classList.add('active');
+  const picker = item.querySelector('.variant-picker');
+  if (picker) { picker.dataset.activeFile = file; picker.querySelector('.variant-picker-btn').textContent = variant + ' ▾'; }
+  _applyVariantToRow(file, item);
+};
+
+function _applyVariantToRow(file, item) {
+  const fn_f = (activeMod?.file_notes || {})[file] || {};
+  const needSel = item.querySelector('.file-needed-sel');
+  if (needSel) { needSel.dataset.file = file; needSel.value = fn_f.needed || ''; }
+  const noteIn = item.querySelector('.file-note-in');
+  if (noteIn) { noteIn.dataset.file = file; noteIn.value = fn_f.note || ''; }
+  const nameEl = item.querySelector('.file-name');
+  if (nameEl) nameEl.dataset.file = file;
+  selectFile(file);
+}
+
+// ── 3D viewer ──────────────────────────────────────────────────────────────
+const canvas = document.getElementById('viewer');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(devicePixelRatio);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 2, 0.01, 10000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+sun.position.set(5, 10, 7);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x8888ff, 0.4);
+fill.position.set(-5, -3, -5);
+scene.add(fill);
+
+let animId = null;
+function startRender() {
+  if (animId) return;
+  function loop() { animId = requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); }
+  loop();
+}
+function stopRender() { if (animId) { cancelAnimationFrame(animId); animId = null; } }
+
+function resizeViewer() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+function clearModels() {
+  for (const c of [...scene.children]) {
+    if (c.isMesh || c.isGroup) {
+      c.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+      scene.remove(c);
+    }
+  }
+}
+
+const MATERIAL = () => new THREE.MeshPhongMaterial({ color: 0x4f7fff, specular: 0x333333, shininess: 40 });
+
+function fitCamera(obj) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  obj.position.sub(center);
+  camera.position.set(maxDim, maxDim * 0.6, maxDim * 1.8);
+  controls.target.set(0, 0, 0);
+  controls.update();
+}
+
+function loadFile(category, name, filename) {
+  clearModels();
+  const url = `/api/mods/${encodeURIComponent(name)}/file/${encodeURIComponent(filename)}`;
+  const ext = filename.split('.').pop().toLowerCase();
+  if (ext === 'stl') {
+    new STLLoader().load(url, geo => {
+      const mesh = new THREE.Mesh(geo, MATERIAL());
+      scene.add(mesh);
+      fitCamera(mesh);
+    });
+  } else if (ext === '3mf') {
+    new ThreeMFLoader().load(url, obj => {
+      obj.traverse(c => { if (c.isMesh) c.material = MATERIAL(); });
+      scene.add(obj);
+      fitCamera(obj);
+    });
+  }
+}
+
+// ── App state ──────────────────────────────────────────────────────────────
+let allMods = [];
+let activeMod = null;
+let activeFilter = 'all';
+let activeOriginFilter = '';
+let searchQuery = '';
+let activeLayout = 'detail';
+let _collapsedSections = new Set(JSON.parse(localStorage.getItem('collapsedSections') || '[]'));
+
+let STATUSES = [];
+let STATUS_MAP = {};
+
+let FILE_STATUSES = [];
+let FILE_STATUS_MAP = {};
+
+let CATEGORIES = [];
+let CAT_MAP = {};
+
+async function loadStatuses() {
+  try {
+    const r = await fetch('/api/statuses');
+    if (r.ok) {
+      STATUSES = await r.json();
+      STATUS_MAP = {};
+      for (const s of STATUSES) STATUS_MAP[s.id] = s;
+    }
+  } catch(e) {
+    console.warn('Could not load statuses, using defaults');
+  }
+  try {
+    const r = await fetch('/api/file-statuses');
+    if (r.ok) {
+      FILE_STATUSES = await r.json();
+      FILE_STATUS_MAP = {};
+      for (const s of FILE_STATUSES) FILE_STATUS_MAP[s.id] = s;
+    }
+  } catch(e) {
+    console.warn('Could not load file statuses, using defaults');
+  }
+  try {
+    const r = await fetch('/api/categories');
+    if (r.ok) {
+      CATEGORIES = await r.json();
+      CAT_MAP = {};
+      for (const c of CATEGORIES) CAT_MAP[c.id] = c;
+      renderCatFilters();
+    }
+  } catch(e) {
+    console.warn('Could not load categories, using defaults');
+  }
+}
+
+function catBadgeHtml(cat) {
+  const e = CAT_MAP[cat];
+  const color = e ? e.color : '#888';
+  const label = e ? e.label : cat;
+  return `<span class="badge rounded-pill" style="background:${color}22;color:${color};font-size:.68rem">${label}</span>`;
+}
+
+function renderCatFilters() {
+  const container = document.getElementById('catFilterBtns');
+  if (!container) return;
+  container.innerHTML = CATEGORIES.map(c =>
+    `<button class="btn btn-sm filter-btn${activeFilter === c.id ? ' active' : ''}" data-filter="${c.id}">${c.label}</button>`
+  ).join('');
+}
+
+function sColor(id)  { return (STATUS_MAP[id] || {}).color || '#888'; }
+function sLabel(id)  { return (STATUS_MAP[id] || {}).label || id; }
+function sDotStyle(id)   { return `background:${sColor(id)}`; }
+function sBadgeStyle(id) { const c = sColor(id); return `background:${c}22;color:${c}`; }
+
+async function loadMods() {
+  const r = await fetch('/api/mods');
+  allMods = await r.json();
+  renderCards();
+}
+
+function visibleMods() {
+  return allMods.filter(m => {
+    if (activeFilter !== 'all' && m.category !== activeFilter) return false;
+    if (activeOriginFilter && m.origin !== activeOriginFilter) return false;
+    if (searchQuery && !m.name.includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
+}
+
+function renderCards() {
+  const mods = visibleMods();
+  document.getElementById('countLabel').textContent = `${mods.length} mod${mods.length !== 1 ? 's' : ''}`;
+  const container = document.getElementById('cards');
+  if (!mods.length) {
+    container.className = 'row g-3';
+    container.innerHTML = '<div class="col-12 text-center py-5 text-muted">No mods found.</div>';
+    return;
+  }
+  if (activeLayout === 'detail') {
+    container.className = 'd-flex flex-column gap-2';
+    // Sort by STATUSES order so sections flow naturally
+    const _sOrder = STATUSES.reduce((a, s, i) => { a[s.id] = i; return a; }, {});
+    const _sorted = [...mods].sort((a, b) => (_sOrder[a.status] ?? 99) - (_sOrder[b.status] ?? 99));
+    let _lastStatus = null;
+    const _parts = [];
+    _sorted.forEach(m => {
+      if (m.status !== _lastStatus) {
+        const _sc = sColor(m.status);
+        const _cnt = _sorted.filter(x => x.status === m.status).length;
+        const _sid = m.status;
+        const _collapsed = _collapsedSections.has(_sid);
+        if (_lastStatus !== null) _parts.push('</div>');
+        _parts.push(`<div style="display:flex;align-items:center;gap:8px;padding:6px 2px;margin-top:${_lastStatus?'10px':'0'};cursor:pointer" onclick="toggleDetailSection('${_sid}',this)">
+          <span class="status-dot" style="background:${_sc}"></span>
+          <span style="color:${_sc};font-size:.76rem;font-weight:600;letter-spacing:.04em">${sLabel(m.status)}</span>
+          <span style="flex:1;height:1px;background:#1e2030"></span>
+          <span style="color:#444;font-size:.72rem">${_cnt}</span>
+          <span class="detail-section-toggle">${_collapsed ? '▶' : '▼'}</span>
+        </div>
+        <div class="detail-section-body${_collapsed ? ' collapsed' : ''}" data-section="${_sid}">`);
+        _lastStatus = m.status;
+      }
+      _parts.push((() => {
+        const m2 = m;
+      const idx = allMods.indexOf(m);
+      const thumb = m.files.length
+        ? `<img class="detail-thumb" src="/api/mods/${encodeURIComponent(m.name)}/thumbnail" onerror="_detailThumbErr(this)">`
+        : `<div class="detail-thumb-placeholder">&#9651;</div>`;
+      return `
+      <div class="detail-row" onclick="openMod(${idx})">
+        ${thumb}
+        <div style="flex:1;min-width:0">
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <span class="fw-semibold" style="color:#fff;font-size:.95rem;word-break:break-word">${m.name}</span>
+            ${catBadgeHtml(m.category)}
+            <span class="badge rounded-pill" style="${sBadgeStyle(m.status)}">${sLabel(m.status)}</span>
+            ${m.origin === 'my-design' ? `<span class="badge badge-origin-mine rounded-pill">✏ Mine</span>` : ''}
+            ${m.pdf_files && m.pdf_files.length ? `<span class="badge badge-pdf rounded-pill">PDF</span>` : ''}
+            ${m.source_url ? `<a href="${m.source_url}" target="_blank" class="ms-auto text-muted small" style="text-decoration:none;white-space:nowrap" onclick="event.stopPropagation()">Source ↗</a>` : ''}
+          </div>
+          ${m.notes ? `<div class="text-muted mb-1" style="font-size:.8rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${m.notes}</div>` : ''}
+          ${m.files.length ? `<div class="file-thumb-strip">${m.files.map(f => {
+            const fn_f = (m.file_notes || {})[f] || {};
+            const needed = fn_f.needed || '';
+            const note   = fn_f.note   || '';
+            const _fs = FILE_STATUS_MAP[needed];
+            const statusHtml = _fs ? `<div style="color:${_fs.color};font-size:.6rem;margin-top:2px">${_fs.label}${note ? ' · '+note : ''}</div>`
+                             : note ? `<div style="color:#888;font-size:.6rem;margin-top:2px">${note}</div>` : '';
+            return `
+            <div class="file-thumb-item">
+              <img class="file-thumb-img" loading="lazy" src="/api/mods/${encodeURIComponent(m.name)}/thumbs/${encodeURIComponent(f)}" onerror="_fileThumbErr(this)" style="${needed==='optional'?'opacity:.6':''}">
+              <div class="file-thumb-label" title="${f}">${f}</div>
+              ${statusHtml}
+            </div>`;
+          }).join('')}</div>` : ''}
+        </div>
+        ${m2.needs_thumbs ? `<button class="btn-render-thumb" onclick="event.stopPropagation();generateModThumbs(event,'${m2.category}','${m2.name}')" title="Generate thumbnails for this mod">⟳ Render</button>` : ''}
+      </div>`;
+      })());
+    });
+    // Close the last open section body
+    if (_lastStatus !== null) _parts.push('</div>');
+    container.innerHTML = _parts.join('');
+  } else {
+    container.className = 'row g-3';
+    container.innerHTML = mods.map(m => {
+      const idx = allMods.indexOf(m);
+      return `
+      <div class="col-6 col-md-4 col-xl-3 col-xxl-2">
+        <div class="card mod-card h-100 p-3" onclick="openMod(${idx})">
+          <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+            <span class="status-dot" style="${sDotStyle(m.status)}"></span>
+            <span class="badge rounded-pill" style="${sBadgeStyle(m.status)}">${sLabel(m.status)}</span>
+            ${catBadgeHtml(m.category)}
+            ${m.origin === 'my-design' ? `<span class="badge badge-origin-mine rounded-pill">✏ Mine</span>` : ''}
+            ${m.pdf_files && m.pdf_files.length ? `<span class="badge badge-pdf rounded-pill">PDF</span>` : ''}
+            <span class="ms-auto text-muted" style="font-size:.75rem">${m.files.length} file${m.files.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="fw-semibold mod-title" style="word-break:break-word;font-size:.9rem">${m.name}</div>
+          ${m.notes ? `<div class="text-muted mt-1" style="font-size:.75rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${m.notes}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// Filter buttons (delegated so dynamic category buttons work)
+document.getElementById('filterRow').addEventListener('click', e => {
+  const btn = e.target.closest('[data-filter].filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('[data-filter].filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = btn.dataset.filter;
+  renderCards();
+});
+
+document.getElementById('searchBox').addEventListener('input', e => {
+  searchQuery = e.target.value.trim();
+  renderCards();
+});
+
+document.getElementById('filterMine').addEventListener('click', function() {
+  if (activeOriginFilter === 'my-design') {
+    activeOriginFilter = '';
+    this.classList.remove('active');
+  } else {
+    activeOriginFilter = 'my-design';
+    this.classList.add('active');
+  }
+  renderCards();
+});
+
+document.getElementById('layoutGrid').addEventListener('click', () => {
+  activeLayout = 'grid';
+  document.getElementById('layoutGrid').classList.add('active');
+  document.getElementById('layoutDetail').classList.remove('active');
+  renderCards();
+});
+document.getElementById('layoutDetail').addEventListener('click', () => {
+  activeLayout = 'detail';
+  document.getElementById('layoutDetail').classList.add('active');
+  document.getElementById('layoutGrid').classList.remove('active');
+  renderCards();
+});
+
+function _docsSetWidth(w) {
+  document.documentElement.style.setProperty('--docs-panel-w', w + 'px');
+  document.body.classList.toggle('docs-panel-wide', w > window.innerWidth * 0.8);
+}
+
+window.snapDocsPanel = function() {
+  const panel = document.getElementById('docsPanel');
+  panel.style.width = '';
+  requestAnimationFrame(() => _docsSetWidth(panel.offsetWidth));
+};
+
+window.snapToThreshold = function() {
+  const panel = document.getElementById('docsPanel');
+  const w = Math.floor(window.innerWidth * 0.8) + 2;
+  panel.style.width = w + 'px';
+  _docsSetWidth(w);
+};
+
+window.generateModThumbs = async function(e, category, name) {
+  const btn = e.currentTarget;
+  const row = btn.closest('.detail-row');
+  btn.disabled = true;
+  btn.textContent = '⏳ starting…';
+
+  const r = await fetch(`/api/mods/${encodeURIComponent(name)}/generate-thumbnails`, { method: 'POST' });
+  if (!r.ok) { btn.disabled = false; btn.textContent = '⟳ Render'; return; }
+
+  const progWrap = document.createElement('div');
+  progWrap.className = 'mod-render-progress';
+  const bar = document.createElement('div');
+  bar.className = 'mod-render-bar';
+  progWrap.appendChild(bar);
+  row.appendChild(progWrap);
+
+  const poll = async () => {
+    const s = await fetch(`/api/mods/${encodeURIComponent(name)}/generate-thumbnails/status`)
+      .then(r => r.json()).catch(() => ({}));
+    if (s.running) {
+      const pct = s.total > 0 ? Math.round((s.done / s.total) * 100) : 5;
+      bar.style.width = pct + '%';
+      btn.textContent = `⏳ ${s.done} / ${s.total}`;
+      setTimeout(poll, 800);
+    } else {
+      bar.style.width = '100%';
+      btn.textContent = `✓ Done`;
+      setTimeout(() => {
+        progWrap.remove();
+        const t = '?t=' + Date.now();
+        row.querySelectorAll('.file-thumb-img').forEach(img => { img.src = img.src.split('?')[0] + t; });
+        const main = row.querySelector('.detail-thumb');
+        if (main) main.src = main.src.split('?')[0] + t;
+        btn.remove();
+      }, 1200);
+    }
+  };
+  setTimeout(poll, 1000);
+};
+
+window.openDocsPanel = function(startIdx) {
+  const pdfs = activeMod.pdf_files || [];
+  if (!pdfs.length) return;
+  const pdfUrl = f => `/api/mods/${encodeURIComponent(activeMod.name)}/file/${encodeURIComponent(f)}`;
+  document.getElementById('docsPanelTitle').textContent = activeMod.name;
+  const frame = document.getElementById('docsPanelFrame');
+  const sel = document.getElementById('docsPanelSelect');
+  frame.src = pdfUrl(pdfs[startIdx || 0]);
+  if (pdfs.length > 1) {
+    sel.style.display = '';
+    sel.innerHTML = pdfs.map((f, i) => `<option value="${i}"${i === (startIdx||0) ? ' selected' : ''}>${f}</option>`).join('');
+    sel.onchange = () => { frame.src = pdfUrl(pdfs[+sel.value]); };
+  } else { sel.style.display = 'none'; }
+  const panel = document.getElementById('docsPanel');
+  panel.classList.remove('collapsed');
+  panel.classList.add('open');
+  document.getElementById('docsCollapseBtn').textContent = '❯';
+  document.getElementById('docsBd').classList.add('open');
+  requestAnimationFrame(() => {
+    _docsSetWidth(panel.offsetWidth);
+    document.body.classList.add('docs-panel-open');
+  });
+};
+
+window.closeDocsPanel = function() {
+  const panel = document.getElementById('docsPanel');
+  panel.classList.remove('open', 'collapsed');
+  document.getElementById('docsBd').classList.remove('open');
+  document.getElementById('docsCollapseBtn').textContent = '❯';
+  document.body.classList.remove('docs-panel-open', 'docs-panel-wide');
+  panel.style.width = '';
+  setTimeout(() => { document.getElementById('docsPanelFrame').src = ''; }, 300);
+};
+
+window.toggleDocsCollapse = function() {
+  const panel = document.getElementById('docsPanel');
+  const btn = document.getElementById('docsCollapseBtn');
+  const isCollapsed = panel.classList.contains('collapsed');
+  panel.classList.toggle('collapsed', !isCollapsed);
+  btn.textContent = isCollapsed ? '❯' : '❮';
+  if (isCollapsed) {
+    _docsSetWidth(panel.offsetWidth);
+    document.body.classList.add('docs-panel-open');
+  } else {
+    document.body.classList.remove('docs-panel-open', 'docs-panel-wide');
+  }
+};
+
+// ── Drag to resize docs panel ──────────────────────────────────────────────
+(function() {
+  const handle = document.getElementById('docsDragHandle');
+  const panel  = document.getElementById('docsPanel');
+  let dragging = false, startX, startW;
+  handle.addEventListener('mousedown', e => {
+    if (e.target.id === 'docsCollapseBtn' || e.target.id === 'docsSnapBtn' || e.target.id === 'docsThreshBtn') return;
+    dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+    panel.style.transition = 'none';
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ew-resize';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const w = Math.min(Math.max(startW + (startX - e.clientX), 280), window.innerWidth * 0.82);
+    panel.style.width = w + 'px';
+    _docsSetWidth(w);
+  });
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    panel.style.transition = '';
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  });
+})();
+
+// ── Default slicer preference ──────────────────────────────────────────────
+const _defSlicerSel = document.getElementById('defaultSlicerSelect');
+_defSlicerSel.value = localStorage.getItem('defaultSlicer') || 'orca';
+_defSlicerSel.addEventListener('change', () => localStorage.setItem('defaultSlicer', _defSlicerSel.value));
+window.openInDefaultSlicer = f => openInSlicer(f, localStorage.getItem('defaultSlicer') || 'orca');
+
+function _snapshotFileNotes() {
+  const fn = {};
+  document.querySelectorAll('.file-needed-sel').forEach(sel => {
+    const f = sel.dataset.file;
+    const note = (document.querySelector(`.file-note-in[data-file="${f}"]`)?.value || '').trim();
+    fn[f] = { needed: sel.value, note };
+  });
+  return fn;
+}
+
+// ── Size-variant auto-detection ────────────────────────────────────────────
+// All patterns applied together to fully normalize the key
+const _SIZE_RES = [
+  /\d+x\d+(?:x\d+)?/gi,              // 1x2, 2x3x1 (grid)
+  /\b\d+x\b/gi,                       // 1x, 2x, 5x (multipliers like rails)
+  /\d+(?:\.\d+)?mm/gi,                // 10mm, 2.5mm
+  /\b(?:x?small|xs|x?large|xl|medium|md|sm|lg)\b/gi, // size words
+  /(?<=[-_])\d+(?=[-_.]|$)/g,         // trailing number _01, -2
+  /[-_][lsm](?=[-_.]|$)/gi,           // single-letter suffix -l, -s, -m
+];
+
+function _normalizeStem(stem) {
+  let s = stem;
+  for (const re of _SIZE_RES) s = s.replace(re, '\x00');
+  // Absorb surrounding separators into placeholder, then collapse multiples
+  s = s.replace(/[-_]?\x00[-_]?/g, '\x00').replace(/\x00+/g, '\x00');
+  return s;
+}
+
+function detectSizeGroups(files) {
+  const stemOf = f => f.replace(/\.[^.]+$/, '');
+  const extOf  = f => (f.match(/\.[^.]+$/) || [''])[0];
+  const buckets = new Map();
+
+  for (const f of files) {
+    const stem = stemOf(f); const ext = extOf(f);
+    const norm = _normalizeStem(stem);
+    if (!norm.includes('\x00')) {
+      buckets.set(f, [{ file: f, variant: null }]);
+      continue;
+    }
+    const bucketKey = norm + ext;
+    const label = norm.split('\x00')[0].replace(/[-_]+$/, '');
+    const variant = stem.slice(label.length).replace(/^[-_]+/, '').replace(/[-_]+$/, '') || stem;
+    if (!buckets.has(bucketKey)) buckets.set(bucketKey, []);
+    buckets.get(bucketKey).push({ file: f, variant });
+  }
+
+  const groups = [], singles = [];
+  for (const [key, members] of buckets) {
+    if (members.length >= 2) {
+      const label = key.split('\x00')[0].replace(/[-_]+$/, '') || 'group';
+      members.sort((a, b) => a.variant.localeCompare(b.variant, undefined, { numeric: true }));
+      groups.push({ label, members });
+    } else {
+      singles.push(members[0].file);
+    }
+  }
+  return { groups, singles };
+}
+
+window.onVariantChange = function(sel) {
+  const item = sel.closest('.file-item');
+  const f = sel.value;
+  const fn_f = (activeMod?.file_notes || {})[f] || {};
+  const needSel = item.querySelector('.file-needed-sel');
+  if (needSel) { needSel.dataset.file = f; needSel.value = fn_f.needed || ''; }
+  const noteIn = item.querySelector('.file-note-in');
+  if (noteIn) { noteIn.dataset.file = f; noteIn.value = fn_f.note || ''; }
+  const nameEl = item.querySelector('.file-name');
+  if (nameEl) { nameEl.dataset.file = f; nameEl.onclick = () => selectFile(f); }
+  selectFile(f);
+};
+
+function renderFileList(fn) {
+  if (!activeMod) return;
+  const fl = document.getElementById('fileList');
+  if (!activeMod.files.length) { fl.innerHTML = '<div class="text-muted small">No printable files found.</div>'; return; }
+
+  const _defSlicer = localStorage.getItem('defaultSlicer') || 'orca';
+  const _slicerOpts = [['orca','OrcaSlicer'],['cura','Cura'],['bambu','Bambu'],['creality','Creality']]
+    .map(([v,l]) => `<option value="${v}"${v===_defSlicer?' selected':''}>${l}</option>`).join('');
+
+  const _needOpts = (activeFile) => {
+    const needed = (fn[activeFile]||{}).needed || '';
+    return `<option value=""${needed===''?' selected':''}>— Status —</option>` +
+      FILE_STATUSES.map(s => `<option value="${s.id}"${needed===s.id?' selected':''}>${s.label}</option>`).join('');
+  };
+
+  const _noteBlock = (activeFile) => {
+    const fn_f = fn[activeFile] || {};
+    const note = (fn_f.note || '').replace(/"/g, '&quot;');
+    const hasNote = !!fn_f.note;
+    return (hasNote ? '' : `<button class="btn-add-note" onclick="toggleFileNote(this)" title="Add note">＋ note</button>`) +
+      `<div class="file-note-row"${hasNote ? '' : ' style="display:none"'}>
+        <input type="text" class="form-control form-control-sm file-note-in" data-file="${activeFile}" placeholder="Part note…" value="${note}">
+        <button class="btn-add-note" onclick="toggleFileNote(this)" title="Hide">－</button>
+      </div>`;
+  };
+
+  const _singleRow = f => `<div class="file-item">
+    <span class="file-name" data-file="${f}" onclick="selectFile('${f}')">${f}</span>
+    <select class="form-select form-select-sm file-needed-sel" data-file="${f}">${_needOpts(f)}</select>
+    <select class="form-select form-select-sm file-slicer-sel">${_slicerOpts}</select>
+    <button class="btn btn-outline-secondary btn-orca" onclick="openFileInSlicer(this,'${f}')">Open</button>
+    ${_noteBlock(f)}
+  </div>`;
+
+  const _groupRow = g => {
+    const af = g.members[0].file;
+    const pickerOpts = g.members.map(m => `
+      <div class="variant-picker-opt"
+           onmouseenter="_showThumbPreview('${m.file}',event)"
+           onmouseleave="_hideThumbPreview()"
+           onclick="selectVariantFromPicker('${m.file}','${m.variant}',this.closest('.variant-picker'))">
+        ${m.variant}
+      </div>`).join('');
+    const tileStrip = `<div class="group-expand-strip">
+      ${g.members.map(m => {
+        const _ts = (fn[m.file]||{}).needed || '';
+        const _tc = _ts ? (FILE_STATUS_MAP[_ts]?.color || '#888') : '';
+        const _tl = _ts ? (FILE_STATUS_MAP[_ts]?.label || _ts) : '';
+        return `
+        <div class="group-thumb-tile${m.file===af?' active':''}"
+             onmouseenter="_showThumbPreview('${m.file}',event)"
+             onmouseleave="_hideThumbPreview()"
+             onmousemove="_positionFloatPreview(event)"
+             onclick="selectVariantFromTile('${m.file}','${m.variant}',this)">
+          <img loading="lazy" src="/api/mods/${encodeURIComponent(activeMod.name)}/thumbs/${encodeURIComponent(m.file)}" onerror="_tileThumbErr(this)">
+          <div class="tile-label" title="${m.file}">${m.variant}</div>
+          ${_tc ? `<div style="display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px">
+            <span style="width:6px;height:6px;border-radius:50%;background:${_tc};flex-shrink:0"></span>
+            <span style="font-size:.58rem;color:${_tc};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60px">${_tl}</span>
+          </div>` : '<div style="height:12px;margin-top:2px"></div>'}
+        </div>`;
+      }).join('')}
+    </div>`;
+    return `<div class="file-item"
+                 onmouseenter="if(!this.querySelector('.variant-picker-list.open'))_showThumbPreview(this.querySelector('.variant-picker').dataset.activeFile,event)"
+                 onmousemove="_positionFloatPreview(event)"
+                 onmouseleave="_hideThumbPreview()">
+      <span class="file-name" data-file="${af}" title="${g.label}"
+            onclick="selectFile(this.closest('.file-item').querySelector('.variant-picker').dataset.activeFile)">${g.label}</span>
+      <div class="variant-picker" data-active-file="${af}">
+        <button class="variant-picker-btn" onclick="toggleVariantPicker(this)">${g.members[0].variant} ▾</button>
+        <div class="variant-picker-list">${pickerOpts}</div>
+      </div>
+      <select class="form-select form-select-sm file-needed-sel" data-file="${af}">${_needOpts(af)}</select>
+      <select class="form-select form-select-sm file-slicer-sel">${_slicerOpts}</select>
+      <button class="btn btn-outline-secondary btn-orca" onclick="openFileInSlicer(this,'${af}')">Open</button>
+      <button class="btn-add-note" onclick="toggleGroupExpand(this)" title="Show all sizes">⊞</button>
+      ${_noteBlock(af)}
+      ${tileStrip}
+    </div>`;
+  };
+
+  const { groups, singles } = detectSizeGroups(activeMod.files);
+
+  // Sort entries by their active file's needed status
+  const _order = Object.fromEntries(FILE_STATUSES.map((s,i) => [s.id, i]));
+  const _pri = f => _order[(fn[f]||{}).needed||''] ?? 99;
+  const allEntries = [
+    ...groups.map(g => ({ type:'group', g, pri: _pri(g.members[0].file) })),
+    ...singles.map(f => ({ type:'single', f, pri: _pri(f) })),
+  ].sort((a, b) => a.pri - b.pri);
+
+  const _sections = [
+    ...FILE_STATUSES.map(s => ({ key: s.id, label: s.label, color: s.color })),
+    { key: '', label: 'Unreviewed', color: '#555' },
+  ];
+
+  let html = '';
+  for (const sec of _sections) {
+    const inSec = allEntries.filter(e =>
+      sec.key
+        ? (e.type==='single' ? (fn[e.f]||{}).needed : (fn[e.g.members[0].file]||{}).needed) === sec.key
+        : !(e.type==='single' ? (fn[e.f]||{}).needed : (fn[e.g.members[0].file]||{}).needed)
+    );
+    if (!inSec.length) continue;
+    html += `<div style="display:flex;align-items:center;gap:6px;padding:5px 2px;margin-top:6px">
+      <span style="color:${sec.color};font-size:.72rem;font-weight:600">${sec.label}</span>
+      <span style="flex:1;height:1px;background:#1e2030"></span>
+      <span style="color:#444;font-size:.68rem">${inSec.length}</span>
+    </div>` + inSec.map(e => e.type==='group' ? _groupRow(e.g) : _singleRow(e.f)).join('');
+  }
+  fl.innerHTML = html;
+}
+
+window.openMod = function(i) {
+  activeMod = allMods[i];
+  document.getElementById('modTitle').textContent = activeMod.name;
+  const catBadge = document.getElementById('modCatBadge');
+  const _ce = CAT_MAP[activeMod.category];
+  const _cc = _ce ? _ce.color : '#888';
+  catBadge.textContent = _ce ? _ce.label : activeMod.category;
+  catBadge.className = 'badge rounded-pill mt-1';
+  catBadge.style.cssText = `background:${_cc}22;color:${_cc};font-size:.68rem`;
+  const sel = document.getElementById('statusSelect');
+  sel.innerHTML = STATUSES.map(s => `<option value="${s.id}"${activeMod.status === s.id ? ' selected' : ''}>${s.label}</option>`).join('');
+  document.getElementById('originSelect').value = activeMod.origin || 'downloaded';
+  document.getElementById('notesArea').value = activeMod.notes;
+  document.getElementById('sourceUrl').value = activeMod.source_url;
+
+  const link = document.getElementById('sourceLink');
+  if (activeMod.source_url) { link.href = activeMod.source_url; link.style.display = ''; }
+  else { link.style.display = 'none'; }
+
+  renderFileList(activeMod.file_notes || {});
+
+  const ss = document.getElementById('sourceSection');
+  const sl = document.getElementById('sourceList');
+  if (activeMod.source_files.length) {
+    sl.innerHTML = activeMod.source_files.map(f => `<div class="source-file py-1">${f}</div>`).join('');
+    ss.style.display = '';
+  } else { ss.style.display = 'none'; }
+
+  // ── Documentation section ──────────────────────────────────────────────────
+  const pdfs = activeMod.pdf_files || [];
+  const docsSection = document.getElementById('docsSection');
+  const docsList = document.getElementById('docsList');
+  if (pdfs.length) {
+    docsList.innerHTML = pdfs.map((f, idx) => `
+      <div class="file-item">
+        <span class="source-file" style="flex:1">${f}</span>
+        <button class="btn btn-sm btn-outline-warning" onclick="openDocsPanel(${idx})">View PDF</button>
+      </div>`).join('');
+    docsSection.style.display = '';
+  } else { docsSection.style.display = 'none'; }
+
+  const modal = new bootstrap.Modal(document.getElementById('modModal'));
+  modal.show();
+
+  document.getElementById('modModal').addEventListener('shown.bs.modal', () => {
+    resizeViewer();
+    startRender();
+    if (activeMod.files.length) selectFile(activeMod.files[0]);
+  }, { once: true });
+};
+
+window.selectFile = function(filename) {
+  document.querySelectorAll('.file-name').forEach(el => el.classList.toggle('active', el.dataset.file === filename));
+  const ext = filename.split('.').pop().toLowerCase();
+  if (['stl', '3mf'].includes(ext)) loadFile(activeMod.category, activeMod.name, filename);
+  else clearModels();
+};
+
+window.openInSlicer = async function(filename, slicer) {
+  const r = await fetch(`/api/mods/${encodeURIComponent(activeMod.name)}/open/${encodeURIComponent(filename)}?slicer=${slicer}`, { method: 'POST' });
+  if (!r.ok) { const d = await r.json(); alert(d.error || `Could not open slicer`); }
+};
+window.openInOrca = filename => openInSlicer(filename, 'orca');
+
+window.copyModPath = async function() {
+  if (!activeMod) return;
+  const btn = document.getElementById('copyPathBtn');
+  try {
+    const r = await fetch(`/api/mods/${encodeURIComponent(activeMod.name)}/folder-path`);
+    const d = await r.json();
+    await navigator.clipboard.writeText(d.path);
+    btn.textContent = '✓ Copied';
+    setTimeout(() => { btn.textContent = '📋 Copy folder path'; }, 2000);
+  } catch(e) {
+    btn.textContent = '✗ Failed';
+    setTimeout(() => { btn.textContent = '📋 Copy folder path'; }, 2000);
+  }
+};
+
+window.toggleDetailSection = function(statusId, headerEl) {
+  const body = headerEl.nextElementSibling;
+  const arrow = headerEl.querySelector('.detail-section-toggle');
+  const collapsed = body.classList.toggle('collapsed');
+  if (arrow) arrow.textContent = collapsed ? '▶' : '▼';
+  if (collapsed) _collapsedSections.add(statusId);
+  else _collapsedSections.delete(statusId);
+  localStorage.setItem('collapsedSections', JSON.stringify([..._collapsedSections]));
+};
+
+window.openFileInSlicer = function(btn, fallback) {
+  const item = btn.closest('.file-item');
+  // For grouped rows, use the picker's currently active variant
+  const picker = item?.querySelector('.variant-picker');
+  const filename = (picker?.dataset.activeFile) || fallback;
+  const sel = item?.querySelector('.file-slicer-sel');
+  const slicer = (sel && sel.offsetParent !== null)
+    ? sel.value
+    : (localStorage.getItem('defaultSlicer') || 'orca');
+  openInSlicer(filename, slicer);
+};
+
+window.toggleFileNote = function(btn) {
+  const item    = btn.closest('.file-item');
+  const noteRow = item.querySelector('.file-note-row');
+  const addBtn  = item.querySelector('.btn-add-note:not([title="Hide"])');
+  if (noteRow.style.display === 'none') {
+    noteRow.style.display = 'flex';
+    if (addBtn) addBtn.style.display = 'none';
+    noteRow.querySelector('input').focus();
+  } else {
+    if (!noteRow.querySelector('input').value.trim()) {
+      noteRow.style.display = 'none';
+      if (addBtn) addBtn.style.display = '';
+    }
+  }
+};
+
+document.getElementById('modModal').addEventListener('hidden.bs.modal', () => {
+  stopRender(); clearModels();
+});
+
+document.getElementById('sourceUrl').addEventListener('input', function() {
+  const link = document.getElementById('sourceLink');
+  if (this.value) { link.href = this.value; link.style.display = ''; }
+  else { link.style.display = 'none'; }
+});
+
+async function _doSave() {
+  if (!activeMod) return;
+  // Start with existing notes so non-active variant notes are preserved
+  const fileNotes = { ...(activeMod.file_notes || {}) };
+  document.querySelectorAll('.file-needed-sel').forEach(sel => {
+    const f    = sel.dataset.file;
+    const note = (document.querySelector(`.file-note-in[data-file="${f}"]`)?.value || '').trim();
+    fileNotes[f] = { needed: sel.value, note };
+  });
+  await fetch(`/api/mods/${encodeURIComponent(activeMod.name)}/meta`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      status:     document.getElementById('statusSelect').value,
+      notes:      document.getElementById('notesArea').value,
+      source_url: document.getElementById('sourceUrl').value,
+      origin:     document.getElementById('originSelect').value,
+      file_notes: fileNotes,
+    }),
+  });
+}
+
+let _saveTimer = null;
+function autoSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    await _doSave();
+    const btn = document.getElementById('saveBtn');
+    btn.textContent = 'Saved ✓';
+    btn.classList.replace('btn-primary', 'btn-success');
+    setTimeout(() => { btn.textContent = 'Save'; btn.classList.replace('btn-success', 'btn-primary'); }, 1500);
+  }, 600);
+}
+
+// Auto-save on any relevant change inside the modal
+document.getElementById('modModal').addEventListener('change', e => {
+  if (e.target.matches('.file-needed-sel')) {
+    const fn = _snapshotFileNotes();
+    if (activeMod) activeMod.file_notes = fn;
+    // Update status dot on the tile for this file without full re-render
+    const changedFile = e.target.dataset.file;
+    const strip = e.target.closest('.file-item')?.querySelector('.group-expand-strip');
+    if (strip) {
+      const tile = [...strip.querySelectorAll('.group-thumb-tile')].find(t => {
+        const lbl = t.querySelector('.tile-label')?.title;
+        return lbl === changedFile;
+      });
+      if (tile) {
+        const needed = e.target.value;
+        const color  = needed ? (FILE_STATUS_MAP[needed]?.color || '#888') : '';
+        const label  = needed ? (FILE_STATUS_MAP[needed]?.label || needed) : '';
+        let dotEl = tile.querySelector('.tile-status-dot');
+        if (!dotEl) {
+          dotEl = document.createElement('div');
+          dotEl.className = 'tile-status-dot';
+          dotEl.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px;height:12px';
+          tile.appendChild(dotEl);
+        }
+        dotEl.innerHTML = color
+          ? `<span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0"></span><span style="font-size:.58rem;color:${color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60px">${label}</span>`
+          : '';
+      }
+    } else {
+      renderFileList(fn);
+    }
+    autoSave();
+  } else if (e.target.matches('#statusSelect, #originSelect')) {
+    autoSave();
+  }
+});
+document.getElementById('modModal').addEventListener('input', e => {
+  if (e.target.matches('#notesArea, #sourceUrl, .file-note-in')) autoSave();
+});
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  if (!activeMod) return;
+  clearTimeout(_saveTimer);
+  await _doSave();
+  await loadMods();
+  bootstrap.Modal.getInstance(document.getElementById('modModal')).hide();
+});
+
+// ── Statuses management ────────────────────────────────────────────────────
+let _dragSrc = null;
+
+function renderStatusList() {
+  const list = document.getElementById('statusList');
+  list.innerHTML = STATUSES.map(s => `
+    <div class="status-edit-row d-flex align-items-center gap-2 mb-1 py-1" draggable="true" data-id="${s.id}">
+      <span class="status-drag">⠿</span>
+      <input type="color" class="status-color-pick" value="${s.color}">
+      <input type="text" class="form-control form-control-sm" value="${s.label}" placeholder="Label" style="flex:1">
+      <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="this.closest('.status-edit-row').remove()">✕</button>
+    </div>`).join('');
+  list.querySelectorAll('.status-edit-row').forEach(row => {
+    row.addEventListener('dragstart', e => { _dragSrc = row; e.dataTransfer.effectAllowed = 'move'; });
+    row.addEventListener('dragover',  e => { e.preventDefault(); row.classList.add('drag-over'); });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.preventDefault(); row.classList.remove('drag-over');
+      if (_dragSrc && _dragSrc !== row)
+        row.parentNode.insertBefore(_dragSrc, row.getBoundingClientRect().top > _dragSrc.getBoundingClientRect().top ? row.nextSibling : row);
+    });
+    row.addEventListener('dragend', () => { _dragSrc = null; list.querySelectorAll('.status-edit-row').forEach(r => r.classList.remove('drag-over')); });
+  });
+}
+
+window.addStatusRow = function() {
+  const label = document.getElementById('newStatusLabel').value.trim();
+  const color = document.getElementById('newStatusColor').value;
+  if (!label) return;
+  const id = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  STATUSES = [...STATUSES, { id, label, color }];
+  renderStatusList();
+  document.getElementById('newStatusLabel').value = '';
+};
+
+window.saveStatuses = async function() {
+  const rows = document.querySelectorAll('#statusList .status-edit-row');
+  const updated = [...rows].map(row => ({
+    id:    row.dataset.id || row.querySelector('input[type=text]').value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+    label: row.querySelector('input[type=text]').value.trim(),
+    color: row.querySelector('input[type=color]').value,
+  })).filter(s => s.label);
+  await fetch('/api/statuses', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(updated) });
+  STATUSES = updated;
+  STATUS_MAP = {};
+  for (const s of STATUSES) STATUS_MAP[s.id] = s;
+  renderCards();
+  bootstrap.Modal.getInstance(document.getElementById('statusesModal')).hide();
+};
+
+document.getElementById('statusesModal').addEventListener('show.bs.modal', renderStatusList);
+
+// ── File statuses management ───────────────────────────────────────────────
+function renderFileStatusList() {
+  const list = document.getElementById('fileStatusList');
+  list.innerHTML = FILE_STATUSES.map(s => `
+    <div class="status-edit-row d-flex align-items-center gap-2 mb-1 py-1" draggable="true" data-id="${s.id}">
+      <span class="status-drag">⠿</span>
+      <input type="color" class="status-color-pick" value="${s.color}">
+      <input type="text" class="form-control form-control-sm" value="${s.label}" placeholder="Label" style="flex:1">
+      <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="this.closest('.status-edit-row').remove()">✕</button>
+    </div>`).join('');
+  let _drag = null;
+  list.querySelectorAll('.status-edit-row').forEach(row => {
+    row.addEventListener('dragstart', e => { _drag = row; e.dataTransfer.effectAllowed = 'move'; });
+    row.addEventListener('dragover',  e => { e.preventDefault(); row.classList.add('drag-over'); });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.preventDefault(); row.classList.remove('drag-over');
+      if (_drag && _drag !== row)
+        row.parentNode.insertBefore(_drag, row.getBoundingClientRect().top > _drag.getBoundingClientRect().top ? row.nextSibling : row);
+    });
+    row.addEventListener('dragend', () => { _drag = null; list.querySelectorAll('.status-edit-row').forEach(r => r.classList.remove('drag-over')); });
+  });
+}
+
+window.addFileStatusRow = function() {
+  const label = document.getElementById('newFileStatusLabel').value.trim();
+  const color = document.getElementById('newFileStatusColor').value;
+  if (!label) return;
+  const id = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  FILE_STATUSES = [...FILE_STATUSES, { id, label, color }];
+  renderFileStatusList();
+  document.getElementById('newFileStatusLabel').value = '';
+};
+
+window.saveFileStatuses = async function() {
+  const rows = document.querySelectorAll('#fileStatusList .status-edit-row');
+  const updated = [...rows].map(row => ({
+    id:    row.dataset.id || row.querySelector('input[type=text]').value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+    label: row.querySelector('input[type=text]').value.trim(),
+    color: row.querySelector('input[type=color]').value,
+  })).filter(s => s.label);
+  await fetch('/api/file-statuses', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(updated) });
+  FILE_STATUSES = updated;
+  FILE_STATUS_MAP = {};
+  for (const s of FILE_STATUSES) FILE_STATUS_MAP[s.id] = s;
+  if (activeMod) renderFileList(activeMod.file_notes || {});
+  bootstrap.Modal.getInstance(document.getElementById('fileStatusesModal')).hide();
+};
+
+document.getElementById('fileStatusesModal').addEventListener('show.bs.modal', renderFileStatusList);
+
+// ── Categories management ──────────────────────────────────────────────────
+function renderCategoryList() {
+  const list = document.getElementById('categoryList');
+  list.innerHTML = CATEGORIES.map(c => `
+    <div class="status-edit-row d-flex align-items-center gap-2 mb-1 py-1" draggable="true" data-id="${c.id}">
+      <span class="status-drag">⠿</span>
+      <input type="color" class="status-color-pick" value="${c.color}">
+      <input type="text" class="form-control form-control-sm" value="${c.label}" placeholder="Label" style="flex:1">
+      <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="this.closest('.status-edit-row').remove()">✕</button>
+    </div>`).join('');
+  list.querySelectorAll('.status-edit-row').forEach(row => {
+    row.addEventListener('dragstart', e => { _dragSrc = row; e.dataTransfer.effectAllowed = 'move'; });
+    row.addEventListener('dragover',  e => { e.preventDefault(); row.classList.add('drag-over'); });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.preventDefault(); row.classList.remove('drag-over');
+      if (_dragSrc && _dragSrc !== row)
+        row.parentNode.insertBefore(_dragSrc, row.getBoundingClientRect().top > _dragSrc.getBoundingClientRect().top ? row.nextSibling : row);
+    });
+    row.addEventListener('dragend', () => { _dragSrc = null; list.querySelectorAll('.status-edit-row').forEach(r => r.classList.remove('drag-over')); });
+  });
+}
+
+window.addCategoryRow = function() {
+  const label = document.getElementById('newCatLabel').value.trim();
+  const color = document.getElementById('newCatColor').value;
+  if (!label) return;
+  const id = label.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
+  CATEGORIES = [...CATEGORIES, { id, label: label.toUpperCase(), color }];
+  renderCategoryList();
+  document.getElementById('newCatLabel').value = '';
+};
+
+window.saveCategories = async function() {
+  const rows = document.querySelectorAll('#categoryList .status-edit-row');
+  const updated = [...rows].map(row => ({
+    id:    row.dataset.id || row.querySelector('input[type=text]').value.trim().toUpperCase(),
+    label: row.querySelector('input[type=text]').value.trim(),
+    color: row.querySelector('input[type=color]').value,
+  })).filter(c => c.label);
+  await fetch('/api/categories', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(updated) });
+  CATEGORIES = updated;
+  CAT_MAP = {};
+  for (const c of CATEGORIES) CAT_MAP[c.id] = c;
+  renderCatFilters();
+  renderCards();
+  bootstrap.Modal.getInstance(document.getElementById('categoriesModal')).hide();
+};
+
+document.getElementById('categoriesModal').addEventListener('show.bs.modal', renderCategoryList);
+
+// ── Top progress bar ───────────────────────────────────────────────────────
+const topBar  = document.getElementById('topBar');
+const topGlow = document.getElementById('topBarGlow');
+function setTopBar(pct) { topBar.style.width=pct+'%'; topBar.classList.add('active'); topGlow.classList.add('active'); }
+function finishTopBar() { setTopBar(100); setTimeout(()=>{ topBar.classList.remove('active'); topGlow.classList.remove('active'); topBar.style.width='0%'; }, 600); }
+
+// ── Drag & drop ────────────────────────────────────────────────────────────
+let dragCounter = 0;
+const dropOverlay = document.getElementById('dropOverlay');
+document.addEventListener('dragenter', e => {
+  if ([...(e.dataTransfer?.items||[])].some(i => i.kind === 'file')) { dragCounter++; dropOverlay.classList.add('active'); }
+});
+document.addEventListener('dragleave', () => { if (--dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('active'); } });
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault(); dragCounter = 0; dropOverlay.classList.remove('active');
+  const zips = [...(e.dataTransfer?.files||[])].filter(f => f.name.toLowerCase().endsWith('.zip'));
+  if (!zips.length) return;
+  const modal = new bootstrap.Modal(document.getElementById('importModal'));
+  if (zips.length === 1) {
+    setImportFile(zips[0]); modal.show();
+  } else {
+    modal.show();
+    setTimeout(() => runBatchImport(zips), 400);
+  }
+});
+
+const modalDropZone = document.getElementById('modalDropZone');
+modalDropZone.addEventListener('dragover', e => { e.preventDefault(); modalDropZone.classList.add('drag-over'); });
+modalDropZone.addEventListener('dragleave', () => modalDropZone.classList.remove('drag-over'));
+modalDropZone.addEventListener('drop', e => {
+  e.preventDefault(); modalDropZone.classList.remove('drag-over');
+  const file = [...(e.dataTransfer?.files||[])].find(f => f.name.toLowerCase().endsWith('.zip'));
+  if (file) setImportFile(file);
+});
+
+function setImportFile(file) {
+  const dt = new DataTransfer(); dt.items.add(file);
+  document.getElementById('importFile').files = dt.files;
+  const n = document.getElementById('importName');
+  if (!n.value) n.value = file.name.replace(/\.zip$/i, '').replace(/[_\s]+/g, '-').toLowerCase();
+  document.getElementById('selectedFileName').textContent = file.name;
+}
+document.getElementById('importFile').addEventListener('change', function() { if (this.files[0]) setImportFile(this.files[0]); });
+
+function closeImportModal() {
+  bootstrap.Modal.getInstance(document.getElementById('importModal'))?.hide();
+  ['importName','importUrl','importDownloadUrl'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('importFile').value = '';
+  document.getElementById('batchFilesInput').value = '';
+  document.getElementById('batchFolderInput').value = '';
+  document.getElementById('selectedFileName').textContent = '';
+  document.getElementById('importStatus').textContent = '';
+  document.getElementById('batchPanel').style.display = 'none';
+  document.getElementById('batchBar').style.width = '0%';
+}
+
+// ── Import from file ───────────────────────────────────────────────────────
+document.getElementById('importBtn').addEventListener('click', async () => {
+  const category = document.getElementById('importCategory').value;
+  const name     = document.getElementById('importName').value.trim();
+  const srcUrl   = document.getElementById('importUrl').value.trim();
+  const file     = document.getElementById('importFile').files[0];
+  const status   = document.getElementById('importStatus');
+  if (!file) { status.textContent = 'Drop or select a zip first.'; status.className = 'mt-2 small text-warning'; return; }
+  status.textContent = 'Importing...'; status.className = 'mt-2 small text-muted';
+  setTopBar(30);
+  const fd = new FormData();
+  fd.append('file', file); fd.append('category', category); if (name) fd.append('name', name);
+  const r = await fetch('/api/import', { method: 'POST', body: fd });
+  finishTopBar();
+  if (r.ok) {
+    const d = await r.json();
+    if (srcUrl) await fetch(`/api/mods/${encodeURIComponent(d.name)}/meta`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_url: srcUrl }),
+    });
+    await loadMods(); closeImportModal();
+  } else { status.textContent = 'Import failed.'; status.className = 'mt-2 small text-danger'; }
+});
+
+// ── Batch import ───────────────────────────────────────────────────────────
+async function runBatchImport(files) {
+  const zips = [...files].filter(f => f.name.toLowerCase().endsWith('.zip'));
+  if (!zips.length) return;
+  const category = document.getElementById('importCategory').value;
+  const panel    = document.getElementById('batchPanel');
+  const label    = document.getElementById('batchLabel');
+  const countEl  = document.getElementById('batchCount');
+  const bar      = document.getElementById('batchBar');
+  panel.style.display = '';
+  let done = 0, failed = 0;
+  for (const file of zips) {
+    label.textContent = file.name;
+    countEl.textContent = `${done + failed + 1} / ${zips.length}`;
+    bar.style.width = Math.round(((done + failed) / zips.length) * 100) + '%';
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('category', category);
+    try {
+      const r = await fetch('/api/import', { method: 'POST', body: fd });
+      if (r.ok) done++; else failed++;
+    } catch(e) { failed++; }
+  }
+  bar.style.width = '100%';
+  label.textContent = `Done — ${done} imported${failed ? `, ${failed} failed` : ''}`;
+  countEl.textContent = `${zips.length} / ${zips.length}`;
+  await loadMods();
+}
+
+document.getElementById('batchFilesInput').addEventListener('change', function() {
+  if (this.files.length) runBatchImport(this.files);
+});
+document.getElementById('batchFolderInput').addEventListener('change', function() {
+  if (this.files.length) runBatchImport(this.files);
+});
+
+// ── Auto-detect Printables URL in source field ─────────────────────────────
+document.getElementById('importUrl').addEventListener('input', function() {
+  const v = this.value.trim();
+  if (/printables\.com\/model\/\d+/i.test(v)) {
+    const dl = document.getElementById('importDownloadUrl');
+    if (!dl.value) dl.value = v;
+  }
+});
+
+// ── Fetch from URL ─────────────────────────────────────────────────────────
+document.getElementById('fetchBtn').addEventListener('click', async () => {
+  let dlUrl      = document.getElementById('importDownloadUrl').value.trim();
+  const srcUrl   = document.getElementById('importUrl').value.trim();
+  const category = document.getElementById('importCategory').value;
+  const name     = document.getElementById('importName').value.trim();
+  const status   = document.getElementById('importStatus');
+  const btn      = document.getElementById('fetchBtn');
+
+  // If download field is empty but source field has a Printables URL, use it
+  if (!dlUrl && /printables\.com\/model\/\d+/i.test(srcUrl)) dlUrl = srcUrl;
+
+  if (!dlUrl) { status.textContent = 'Enter a URL first.'; status.className = 'mt-2 small text-warning'; return; }
+
+  const isPrintables = /printables\.com\/model\/\d+/i.test(dlUrl);
+  status.textContent = isPrintables ? 'Fetching from Printables...' : 'Downloading...';
+  status.className = 'mt-2 small text-muted';
+  btn.disabled = true;
+  setTopBar(20);
+
+  const endpoint = isPrintables ? '/api/fetch-printables' : '/api/fetch-zip';
+  const body = isPrintables
+    ? JSON.stringify({ url: dlUrl, category, name })
+    : JSON.stringify({ url: dlUrl, category, name, source_url: srcUrl });
+
+  const r = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+  btn.disabled = false; finishTopBar();
+  if (r.ok) {
+    await loadMods(); closeImportModal();
+  } else {
+    const d = await r.json().catch(() => ({}));
+    status.textContent = d.error || (isPrintables ? 'Printables fetch failed.' : 'Download failed — is this a direct .zip link?');
+    status.className = 'mt-2 small text-danger';
+  }
+});
+
+// ── Watch folder polling ───────────────────────────────────────────────────
+let _watchImported = 0;
+let _watchInfo = null;
+window.showWatchInfo = function() {
+  if (!_watchInfo) return;
+  alert(`Watch folder: ${_watchInfo.path}\n\nDrop .zip, .3mf, or .stl files here and they will auto-import.\nUse FDM/ or SLA/ subfolders to set category.\n\nAuto-imported: ${_watchInfo.imported}\nFailed: ${_watchInfo.failed}\nLast: ${_watchInfo.last || 'none'}`);
+};
+function pollWatchFolder() {
+  fetch('/api/watch-folder').then(r => r.json()).then(d => {
+    _watchInfo = d;
+    if (d.exists) {
+      document.getElementById('watch-indicator').style.display = '';
+      document.getElementById('watch-label').textContent = `${d.imported} auto-imported`;
+      if (d.imported > _watchImported) {
+        _watchImported = d.imported;
+        loadMods();
+      }
+    }
+  }).catch(() => {});
+  setTimeout(pollWatchFolder, 5000);
+}
+pollWatchFolder();
+
+let _debugInfo = null;
+fetch('/api/debug').then(r => r.json()).then(d => {
+  _debugInfo = d;
+  if (!d.models_dir_exists || d.mod_count === 0) {
+    document.getElementById('debug-warning').style.display = '';
+  }
+});
+window.showDebug = function() {
+  if (!_debugInfo) return;
+  const d = _debugInfo;
+  alert(
+    `Library root (env): ${d.library_root_env}\n` +
+    `Root path: ${d.root}\n` +
+    `Models dir: ${d.models_dir}\n` +
+    `Models dir exists: ${d.models_dir_exists}\n` +
+    `Mod count: ${d.mod_count}\n` +
+    `First mods: ${d.first_five.join(', ') || 'none'}`
+  );
+};
+
+function _initSlicerIcon(api, id, name, envVar) {
+  fetch(api).then(r => r.json()).then(d => {
+    const el = document.getElementById(id);
+    if (d.found) {
+      el.classList.add('available');
+      el.title = name;
+    } else {
+      el.title = `${name} — not detected (set ${envVar})`;
+    }
+  });
+}
+_initSlicerIcon('/api/orca',     'icon-orca',     'OrcaSlicer',    'ORCA_PATH');
+_initSlicerIcon('/api/cura',     'icon-cura',     'Cura',          'CURA_PATH');
+_initSlicerIcon('/api/bambu',    'icon-bambu',    'Bambu Studio',  'BAMBU_PATH');
+_initSlicerIcon('/api/creality', 'icon-creality', 'Creality Print','CREALITY_PATH');
+
+loadStatuses().then(() => loadMods());
+</script>
+
+<!-- Categories modal -->
+<div class="modal fade" id="categoriesModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+    <div class="modal-content">
+      <div class="modal-header py-2 px-3">
+        <h6 class="modal-title fw-semibold mb-0">Manage Categories</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-3 py-3">
+        <div id="categoryList" class="mb-3"></div>
+        <div class="d-flex gap-2 align-items-center">
+          <input type="text" class="form-control form-control-sm" id="newCatLabel" placeholder="New category name...">
+          <input type="color" id="newCatColor" value="#4f7fff" class="status-color-pick">
+          <button class="btn btn-sm btn-outline-primary" onclick="addCategoryRow()">Add</button>
+        </div>
+      </div>
+      <div class="modal-footer py-2 px-3">
+        <small class="text-muted me-auto">Drag ⠿ to reorder · Auto-discovered categories appear on save</small>
+        <button class="btn btn-sm btn-primary" onclick="saveCategories()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Statuses modal -->
+<div class="modal fade" id="statusesModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+    <div class="modal-content">
+      <div class="modal-header py-2 px-3">
+        <h6 class="modal-title fw-semibold mb-0">Manage Statuses</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-3 py-3">
+        <div id="statusList" class="mb-3"></div>
+        <div class="d-flex gap-2 align-items-center">
+          <input type="text" class="form-control form-control-sm" id="newStatusLabel" placeholder="New status name...">
+          <input type="color" id="newStatusColor" value="#4f7fff" class="status-color-pick">
+          <button class="btn btn-sm btn-outline-primary" onclick="addStatusRow()">Add</button>
+        </div>
+      </div>
+      <div class="modal-footer py-2 px-3">
+        <small class="text-muted me-auto">Drag ⠿ to reorder</small>
+        <button class="btn btn-sm btn-primary" onclick="saveStatuses()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- File statuses modal -->
+<div class="modal fade" id="fileStatusesModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+    <div class="modal-content">
+      <div class="modal-header py-2 px-3">
+        <h6 class="modal-title fw-semibold mb-0">Manage File Statuses</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-3 py-3">
+        <div id="fileStatusList" class="mb-3"></div>
+        <div class="d-flex gap-2 align-items-center">
+          <input type="text" class="form-control form-control-sm" id="newFileStatusLabel" placeholder="New status name...">
+          <input type="color" id="newFileStatusColor" value="#4f7fff" class="status-color-pick">
+          <button class="btn btn-sm btn-outline-primary" onclick="addFileStatusRow()">Add</button>
+        </div>
+      </div>
+      <div class="modal-footer py-2 px-3">
+        <small class="text-muted me-auto">Drag ⠿ to reorder</small>
+        <button class="btn btn-sm btn-primary" onclick="saveFileStatuses()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="thumbFloat"><img id="thumbFloatImg" alt=""></div>
+
+<!-- Docs slide-out panel -->
+<div id="docsBd"></div>
+<div id="docsPanel">
+  <div id="docsDragHandle">
+    <button id="docsCollapseBtn" onclick="toggleDocsCollapse()" title="Collapse panel">❯</button>
+    <button id="docsThreshBtn" onclick="snapToThreshold()" title="Snap to vertical layout">↕</button>
+    <button id="docsSnapBtn" onclick="snapDocsPanel()" title="Reset to 50%">⊡</button>
+  </div>
+  <div id="docsPanelContent">
+    <div class="d-flex align-items-center gap-2 px-3 py-2" style="border-bottom:1px solid #2a2d3e;flex-shrink:0">
+      <span id="docsPanelTitle" class="fw-semibold text-truncate" style="flex:1;font-size:.9rem;color:#fff"></span>
+      <select id="docsPanelSelect" class="form-select form-select-sm me-1" style="display:none;width:auto;max-width:180px"></select>
+      <button class="btn-close btn-close-white" onclick="closeDocsPanel()"></button>
+    </div>
+    <iframe id="docsPanelFrame" title="Documentation"></iframe>
+  </div>
+</div>
+</body>
+</html>

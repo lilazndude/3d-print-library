@@ -1,0 +1,25 @@
+name: 3d-print-library
+
+services:
+  app:
+    build: .
+    image: 3d-print-library:latest
+    container_name: 3d-print-library
+    ports:
+      - "5000:5000"
+    volumes:
+      - ${LIBRARY_HOST_PATH:-/media/CONFIG/3D_Printing/repo}:/library
+    environment:
+      - LIBRARY_ROOT=/library
+    restart: unless-stopped
+
+x-casaos:
+  author: local
+  category: utilities
+  description:
+    en_us: Browse, organize, and manage 3D print model files with live preview and OrcaSlicer integration.
+  icon: https://cdn-icons-png.flaticon.com/512/2092/2092054.png
+  index: /
+  port_map: "5000"
+  title:
+    en_us: 3D Print Library
