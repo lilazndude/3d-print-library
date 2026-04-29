@@ -180,6 +180,7 @@
     <span id="formatFilterBtns" class="d-flex gap-2 flex-wrap"></span>
     <div style="width:1px;height:16px;background:#2a2d3e"></div>
     <button class="btn btn-sm filter-btn" id="filterMine" data-origin="my-design">✏ Mine</button>
+    <button class="btn btn-sm filter-btn" id="filterNew">🆕 New</button>
     <div class="ms-2 d-flex align-items-center gap-2">
       <input type="search" class="form-control form-control-sm" id="searchBox" placeholder="Search..." style="width:180px">
     </div>
@@ -205,7 +206,7 @@
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header py-2 px-3">
-        <div>
+        <div style="flex:1;min-width:0;margin-right:8px">
           <h6 class="modal-title fw-semibold mb-0" id="modTitle"></h6>
           <div class="d-flex gap-1 flex-wrap mt-1" id="modCatBadge"></div>
         </div>
@@ -215,6 +216,13 @@
         </div>
       </div>
       <div class="modal-body px-3 py-3">
+        <div class="mb-3">
+          <label class="form-label mb-1" style="font-size:.75rem;color:#aaa">Display Name</label>
+          <input type="text" id="modDisplayName" class="form-control form-control-sm"
+            placeholder="e.g. Jabba the Hutt &amp; Leia">
+          <div id="modFolderSlug" style="font-size:.68rem;color:#444;margin-top:3px"></div>
+          <div id="modNameSuggestions" class="d-flex gap-1 flex-wrap mt-2" style="min-height:0"></div>
+        </div>
         <canvas id="viewer"></canvas>
 
         <div id="docsSection" style="display:none">
@@ -276,6 +284,7 @@
         </div>
       </div>
       <div class="modal-footer py-2 px-3">
+        <button class="btn btn-sm btn-outline-danger me-auto" id="deleteModBtn" onclick="deleteMod()">Delete</button>
         <button class="btn btn-sm btn-primary" id="saveBtn">Save &amp; Close</button>
       </div>
     </div>
@@ -615,6 +624,7 @@ let activeMod = null;
 let activePrinterFilter = 'all';
 let activeFormatFilter = 'all';
 let activeOriginFilter = '';
+let activeNewFilter = false;
 let searchQuery = '';
 let activeLayout = 'detail';
 let _collapsedSections = new Set(JSON.parse(localStorage.getItem('collapsedSections') || '[]'));
@@ -703,6 +713,7 @@ function visibleMods() {
     if (activePrinterFilter !== 'all' && !(m.printer_types || []).includes(activePrinterFilter)) return false;
     if (activeFormatFilter !== 'all' && !(m.file_formats || []).includes(activeFormatFilter)) return false;
     if (activeOriginFilter && m.origin !== activeOriginFilter) return false;
+    if (activeNewFilter && !m.newly_imported) return false;
     if (searchQuery && !m.name.includes(searchQuery.toLowerCase())) return false;
     return true;
   });
@@ -752,10 +763,14 @@ function renderCards() {
         ${thumb}
         <div style="flex:1;min-width:0">
           <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-            <span class="fw-semibold" style="color:#fff;font-size:.95rem;word-break:break-word">${m.name}</span>
+            <span class="fw-semibold" style="color:#fff;font-size:.95rem;word-break:break-word">${m.display_name || m.name}</span>
+            ${m.display_name ? `<span style="font-size:.62rem;color:#444">${m.name}</span>` : ''}
             <span class="badge rounded-pill" style="${sBadgeStyle(m.status)}">${sLabel(m.status)}</span>
             ${m.origin === 'my-design' ? `<span class="badge badge-origin-mine rounded-pill">✏ Mine</span>` : ''}
             ${m.pdf_files && m.pdf_files.length ? `<span class="badge badge-pdf rounded-pill">PDF</span>` : ''}
+            ${m.newly_imported ? `<span class="badge rounded-pill" style="background:#1e3a5f;color:#7dd3fc;font-size:.65rem">🆕 New</span>` : ''}
+            ${m.needs_display_name ? `<span class="badge rounded-pill" style="background:#1a2e1a;color:#6ee7b7;font-size:.65rem" title="Brand-prefixed name — open to set a display name">✎ Name?</span>` : ''}
+            ${m.possible_duplicate ? `<span class="badge rounded-pill" style="background:#7f1d1d;color:#fca5a5;font-size:.65rem" title="Possible duplicate of: ${m.possible_duplicate}">⚠ Duplicate?</span>` : ''}
             ${m.source_url ? `<a href="${m.source_url}" target="_blank" class="ms-auto text-muted small" style="text-decoration:none;white-space:nowrap" onclick="event.stopPropagation()">Source ↗</a>` : ''}
           </div>
           <div class="d-flex gap-3 flex-wrap mb-1">
@@ -807,7 +822,8 @@ function renderCards() {
             ${m.pdf_files && m.pdf_files.length ? `<span class="badge badge-pdf rounded-pill">PDF</span>` : ''}
             <span class="ms-auto text-muted" style="font-size:.75rem">${m.files.length} file${m.files.length !== 1 ? 's' : ''}</span>
           </div>
-          <div class="fw-semibold mod-title" style="word-break:break-word;font-size:.9rem">${m.name}</div>
+          <div class="fw-semibold mod-title" style="word-break:break-word;font-size:.9rem">${m.display_name || m.name}</div>
+          ${m.display_name ? `<div style="font-size:.62rem;color:#444;word-break:break-all">${m.name}</div>` : ''}
           ${m.notes ? `<div class="text-muted mt-1" style="font-size:.75rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${m.notes}</div>` : ''}
         </div>
       </div>`;
@@ -847,6 +863,12 @@ document.getElementById('filterMine').addEventListener('click', function() {
     activeOriginFilter = 'my-design';
     this.classList.add('active');
   }
+  renderCards();
+});
+
+document.getElementById('filterNew').addEventListener('click', function() {
+  activeNewFilter = !activeNewFilter;
+  this.classList.toggle('active', activeNewFilter);
   renderCards();
 });
 
@@ -1192,8 +1214,24 @@ function renderFileList(fn) {
 
 window.openMod = function(i) {
   activeMod = allMods[i];
-  document.getElementById('modTitle').textContent = activeMod.name;
+  document.getElementById('modTitle').textContent = activeMod.display_name || activeMod.name;
   document.getElementById('modCatBadge').innerHTML = (activeMod.printer_types||[]).map(t=>catBadgeHtml(t)).join('');
+  const _dn = document.getElementById('modDisplayName');
+  _dn.value = activeMod.display_name || '';
+  _dn.placeholder = activeMod.name;
+  document.getElementById('modFolderSlug').textContent = `Folder: ${activeMod.name}`;
+
+  // Fetch name suggestions from file analysis
+  const _sugg = document.getElementById('modNameSuggestions');
+  _sugg.innerHTML = '';
+  fetch(`/api/mods/${encodeURIComponent(activeMod.name)}/name-suggestions`)
+    .then(r => r.json()).then(suggestions => {
+      if (!suggestions.length) return;
+      _sugg.innerHTML = '<span style="font-size:.65rem;color:#555;white-space:nowrap">Suggestions:</span>' +
+        suggestions.map(s => `<button class="btn btn-sm" style="padding:1px 7px;font-size:.68rem;background:#1a1d27;border:1px solid #2a2d3e;color:#14b8a6;border-radius:4px"
+          onclick="document.getElementById('modDisplayName').value='${s.replace(/'/g,"\\'")}';autoSave()">${s}</button>`).join('');
+    }).catch(() => {});
+
 
   // Printer type toggles
   const _pt = activeMod.printer_types || [];
@@ -1326,6 +1364,14 @@ document.getElementById('sourceUrl').addEventListener('input', function() {
   else { link.style.display = 'none'; }
 });
 
+window.deleteMod = async function() {
+  if (!activeMod) return;
+  if (!confirm(`Permanently delete "${activeMod.name}" and all its files?\n\nThis cannot be undone.`)) return;
+  await fetch(`/api/mods/${encodeURIComponent(activeMod.name)}`, { method: 'DELETE' });
+  bootstrap.Modal.getInstance(document.getElementById('modModal')).hide();
+  await loadMods();
+};
+
 window.togglePrinterType = function(btn, type, color) {
   btn.classList.toggle('active');
   const on = btn.classList.contains('active');
@@ -1348,6 +1394,8 @@ async function _doSave() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      display_name:     document.getElementById('modDisplayName').value.trim(),
+      newly_imported:   false,
       status:        document.getElementById('statusSelect').value,
       notes:         document.getElementById('notesArea').value,
       source_url:    document.getElementById('sourceUrl').value,
@@ -1407,7 +1455,7 @@ document.getElementById('modModal').addEventListener('change', e => {
   }
 });
 document.getElementById('modModal').addEventListener('input', e => {
-  if (e.target.matches('#notesArea, #sourceUrl, .file-note-in')) autoSave();
+  if (e.target.matches('#notesArea, #sourceUrl, #modDisplayName, .file-note-in')) autoSave();
 });
 
 document.getElementById('saveBtn').addEventListener('click', async () => {

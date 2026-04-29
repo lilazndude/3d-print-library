@@ -212,6 +212,66 @@ def read_meta(mod_dir):
 def write_meta(mod_dir, meta):
     (mod_dir / 'meta.json').write_text(json.dumps(meta, indent=2))
 
+BRAND_PREFIXES = {'gambody', 'thingiverse', 'printables', 'myminifactory', 'cults3d', 'cults', 'thangs', 'sources', 'source'}
+NOISE_WORDS    = {'part', 'parts', 'body', 'head', 'base', 'top', 'bottom', 'left', 'right', 'front', 'back',
+                  'v1', 'v2', 'v3', 'v4', 'print', 'printed', 'support', 'supports', 'no', 'with', 'and',
+                  'the', 'for', 'by', 'of', 'a', 'an', 'tall', 'short', 'small', 'large', 'medium',
+                  'version', 'remix', 'fixed', 'updated', 'final', 'new', 'old', 'file', 'files',
+                  'stl', '3mf', 'obj', 'model', 'models', 'print', 'assembly', 'asm'}
+
+def _is_noise_token(w):
+    import re
+    if len(w) < 3:                    return True  # too short
+    if re.search(r'\d{2,}', w):       return True  # contains 2+ digits (IDs, version numbers)
+    if w in NOISE_WORDS:              return True
+    if w in BRAND_PREFIXES:           return True
+    return False
+
+def _derive_name_suggestions(mod_dir):
+    import re
+    from collections import Counter
+    files = [f for f in mod_dir.iterdir() if f.is_file() and f.suffix.lower() in PRINTABLE | PDF]
+    if not files:
+        return []
+    stems = [f.stem for f in files]
+
+    def tokenize(stem):
+        words = [w.lower() for w in re.split(r'[-_\s]+', stem) if w]
+        return [w for w in words if not _is_noise_token(w)]
+
+    word_lists = [tokenize(s) for s in stems]
+    suggestions = []
+
+    # 1. Longest common ordered prefix across all files (best signal)
+    if len(stems) > 1:
+        ref = tokenize(stems[0])
+        common = []
+        for token in ref:
+            idx = len(common)
+            if all(len(tokenize(s)) > idx and tokenize(s)[idx] == token for s in stems[1:]):
+                common.append(token)
+            else:
+                break
+        if common:
+            suggestions.append(' '.join(w.title() for w in common))
+
+    # 2. Words appearing in most files, combined as a phrase
+    all_words = [w for wl in word_lists for w in wl]
+    counts = Counter(all_words)
+    threshold = max(1, len(files) * 0.4)
+    frequent = [w for w, c in counts.most_common(8) if c >= threshold]
+    if frequent:
+        phrase = ' '.join(w.title() for w in frequent[:4])
+        if phrase not in suggestions:
+            suggestions.append(phrase)
+        # Individual high-frequency words as extra chips
+        for w in frequent[:5]:
+            chip = w.title()
+            if chip not in suggestions and chip.lower() not in (s.lower() for s in suggestions):
+                suggestions.append(chip)
+
+    return suggestions[:5]
+
 def mod_info(mod_dir):
     meta = read_meta(mod_dir)
     files = sorted([f.name for f in mod_dir.iterdir() if f.is_file() and f.suffix.lower() in PRINTABLE])
@@ -244,6 +304,10 @@ def mod_info(mod_dir):
         'source_url': meta.get('source_url', ''),
         'file_notes': meta.get('file_notes', {}),
         'origin': meta.get('origin', 'downloaded'),
+        'possible_duplicate': meta.get('possible_duplicate', ''),
+        'display_name': meta.get('display_name', ''),
+        'needs_display_name': meta.get('needs_display_name', False) and not meta.get('display_name'),
+        'newly_imported': meta.get('newly_imported', False),
     }
 
 @app.route('/api/version')
@@ -304,6 +368,51 @@ def api_file_thumb(name, filename):
     if not p.exists():
         abort(404)
     return send_file(p, mimetype='image/png', max_age=3600)
+
+@app.route('/api/mods/<name>/export')
+def api_export_mod(name):
+    import io, zipfile as _zf
+    d = ROOT / MODELS / name
+    if not d.is_dir():
+        abort(404)
+    meta = read_meta(d)
+    file_notes = meta.get('file_notes', {})
+
+    all_print = [f for f in d.iterdir() if f.is_file() and f.suffix.lower() in PRINTABLE]
+    needed    = [f for f in all_print if file_notes.get(f.name, {}).get('needed') == 'needed']
+    pdfs      = [f for f in d.iterdir() if f.is_file() and f.suffix.lower() in PDF]
+
+    export_files = (needed if needed else all_print) + pdfs
+
+    buf = io.BytesIO()
+    with _zf.ZipFile(buf, 'w', _zf.ZIP_DEFLATED) as z:
+        for f in export_files:
+            z.write(f, f.name)
+        notes = meta.get('notes', '').strip()
+        if notes:
+            z.writestr('NOTES.txt', notes)
+    buf.seek(0)
+
+    display_name = meta.get('display_name') or name
+    safe_name = display_name.replace('/', '-').replace('\\', '-')
+    return send_file(buf, mimetype='application/zip',
+                     as_attachment=True,
+                     download_name=f'{safe_name}.zip')
+
+@app.route('/api/mods/<name>/name-suggestions')
+def api_name_suggestions(name):
+    d = ROOT / MODELS / name
+    if not d.is_dir():
+        abort(404)
+    return jsonify(_derive_name_suggestions(d))
+
+@app.route('/api/mods/<name>', methods=['DELETE'])
+def api_delete_mod(name):
+    d = ROOT / MODELS / name
+    if not d.is_dir():
+        abort(404)
+    shutil.rmtree(str(d))
+    return jsonify({'ok': True})
 
 @app.route('/api/mods/<name>/thumbnail', methods=['POST'])
 def api_thumbnail_post(name):
@@ -677,6 +786,31 @@ def api_fetch_zip():
 # ── Watch folder ──────────────────────────────────────────────────────────
 _watch_state = {'imported': 0, 'failed': 0, 'last': ''}
 
+def _find_duplicate(slug):
+    """Return the name of an existing mod that is a substring match of slug, or None."""
+    for d in mod_dirs():
+        name = d.name
+        if name == slug:
+            continue
+        if slug in name or name in slug:
+            return name
+    return None
+
+def _unique_slug(base):
+    """Return base slug if unused or empty, otherwise base-2, base-3, etc."""
+    candidate = base
+    counter = 2
+    while True:
+        d = ROOT / MODELS / candidate
+        if not d.exists():
+            break
+        has_files = any(f for f in d.iterdir() if f.is_file() and f.suffix.lower() in PRINTABLE)
+        if not has_files:
+            break  # folder exists but is empty — reuse it
+        candidate = f'{base}-{counter}'
+        counter += 1
+    return candidate
+
 def _watch_slug(stem):
     import re
     n = re.sub(r'\s*\(\d+\)$',     '', stem)
@@ -688,7 +822,7 @@ def _watch_slug(stem):
 
 def _watch_import_zip(f, processed_dir, category='FDM'):
     global _watch_state
-    name    = _watch_slug(f.stem)
+    name    = _unique_slug(_watch_slug(f.stem))
     mod_dir = ROOT / MODELS / name
     mod_dir.mkdir(parents=True, exist_ok=True)
     src_dir = mod_dir / 'source'
@@ -706,6 +840,12 @@ def _watch_import_zip(f, processed_dir, category='FDM'):
                         dest.write_bytes(z.read(member))
         meta = read_meta(mod_dir)
         meta['category'] = category
+        meta['newly_imported'] = True
+        dup = _find_duplicate(name)
+        if dup:
+            meta['possible_duplicate'] = dup
+        if any(name.startswith(b) for b in BRAND_PREFIXES):
+            meta.setdefault('needs_display_name', True)
         write_meta(mod_dir, meta)
         shutil.move(str(f), str(processed_dir / f.name))
         _watch_state['imported'] += 1
@@ -715,7 +855,7 @@ def _watch_import_zip(f, processed_dir, category='FDM'):
 
 def _watch_import_model(f, processed_dir, category='FDM'):
     global _watch_state
-    name    = _watch_slug(f.stem)
+    name    = _unique_slug(_watch_slug(f.stem))
     mod_dir = ROOT / MODELS / name
     mod_dir.mkdir(parents=True, exist_ok=True)
     dest = mod_dir / f.name
@@ -723,6 +863,12 @@ def _watch_import_model(f, processed_dir, category='FDM'):
         shutil.copy2(f, dest)
     meta = read_meta(mod_dir)
     meta['category'] = category
+    meta['newly_imported'] = True
+    dup = _find_duplicate(name)
+    if dup:
+        meta['possible_duplicate'] = dup
+    if any(name.startswith(b) for b in BRAND_PREFIXES):
+        meta.setdefault('needs_display_name', True)
     write_meta(mod_dir, meta)
     shutil.move(str(f), str(processed_dir / f.name))
     _watch_state['imported'] += 1

@@ -76,3 +76,7 @@
 - `.gitignore` excluding models, venvs, user config, archives
 - Repo initialized at correct root level
 - Pushed to https://github.com/lilazndude/3d-print-library
+
+
+added support for ambiguous files.  something like gambody would be imported and indexed if duplicate (additional files from that source)
+clicking on the 'new' filter at the top will filter to that card.  suggestions should be there, so the user can label that project (does not change the folder name)
