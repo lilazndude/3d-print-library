@@ -101,7 +101,6 @@ DEFAULT_FILE_STATUSES = [
 DEFAULT_CATEGORIES = [
     {'id': 'FDM', 'label': 'FDM', 'color': '#7dd3fc'},
     {'id': 'SLA', 'label': 'SLA', 'color': '#c4b5fd'},
-    {'id': 'STL', 'label': 'STL', 'color': '#6ee7b7'},
 ]
 
 def get_categories():
@@ -225,8 +224,16 @@ def mod_info(mod_dir):
         not (mod_dir / 'thumbnail.png').exists() or
         any((fn + '.png') not in rendered for fn in files)
     )
+    # printer_types: multi-value, falls back to legacy single category field
+    printer_types = meta.get('printer_types')
+    if not printer_types:
+        legacy = meta.get('category', 'FDM')
+        printer_types = [legacy] if legacy else ['FDM']
+    # file_formats: auto-detected from actual files present
+    file_formats = sorted({Path(f).suffix.lstrip('.').upper() for f in files if Path(f).suffix})
     return {
-        'category': meta.get('category', 'FDM'),
+        'printer_types': printer_types,
+        'file_formats': file_formats,
         'name': mod_dir.name,
         'files': files,
         'pdf_files': pdf_files,
@@ -238,6 +245,17 @@ def mod_info(mod_dir):
         'file_notes': meta.get('file_notes', {}),
         'origin': meta.get('origin', 'downloaded'),
     }
+
+@app.route('/api/version')
+def api_version():
+    tmpl = Path(app.template_folder) / 'index.html'
+    content = tmpl.read_text(encoding='utf-8')
+    return jsonify({
+        'template_path': str(tmpl),
+        'has_printer_filter': 'printer-filter' in content,
+        'has_format_filter': 'format-filter' in content,
+        'has_printer_types': 'printer_types' in content,
+    })
 
 @app.route('/api/debug')
 def api_debug():
@@ -260,7 +278,10 @@ def api_debug():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    from flask import make_response
+    r = make_response(render_template('index.html'))
+    r.headers['Cache-Control'] = 'no-store'
+    return r
 
 
 @app.route('/api/mods/<name>/folder-path')

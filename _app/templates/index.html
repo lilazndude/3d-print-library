@@ -56,6 +56,7 @@
   .group-thumb-tile .tile-label { font-family:monospace; font-size:.62rem; color:#888; margin-top:3px; max-width:72px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #thumbFloat { display:none; position:fixed; z-index:9999; pointer-events:none; background:#1a1d27; border:1px solid #2a2d3e; border-radius:8px; padding:5px; box-shadow:0 6px 24px rgba(0,0,0,.6); }
   #thumbFloat img { width:140px; height:140px; object-fit:cover; border-radius:6px; display:block; }
+  .detail-section-body { display:flex; flex-direction:column; gap:8px; }
   .detail-section-body.collapsed { display:none; }
   .detail-section-toggle { cursor:pointer; font-size:.7rem; color:#555; user-select:none; }
   .detail-section-toggle:hover { color:#fff; }
@@ -143,6 +144,7 @@
     <div class="d-flex align-items-center gap-3">
       <div id="debug-warning" class="text-danger small" style="display:none;cursor:pointer" onclick="showDebug()">⚠ Library not found — click for details</div>
       <div class="d-flex gap-1 align-items-center">
+        <span class="text-muted me-1" style="font-size:.68rem">Slicers</span>
         <span class="slicer-icon" id="icon-orca"     title="OrcaSlicer — not detected (set ORCA_PATH)">Orca</span>
         <span class="slicer-icon" id="icon-cura"     title="Cura — not detected (set CURA_PATH)">Cura</span>
         <span class="slicer-icon" id="icon-bambu"    title="Bambu Studio — not detected (set BAMBU_PATH)">Bambu</span>
@@ -167,17 +169,22 @@
   <div id="genStatus" class="text-muted small mb-2" style="display:none"></div>
 
   <div id="filterRow" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
-    <button class="btn btn-sm filter-btn active" data-filter="all">All</button>
+    <span style="font-size:.82rem;color:#fff;font-weight:500">Printer:</span>
+    <button class="btn btn-sm filter-btn active" data-printer-filter="all">All</button>
     <span id="catFilterBtns" class="d-flex gap-2 flex-wrap"></span>
-    <button class="btn btn-sm btn-outline-secondary p-0" id="catGearBtn" data-bs-toggle="modal" data-bs-target="#categoriesModal" style="width:22px;height:22px;font-size:.7rem;line-height:1;border-radius:4px" title="Manage categories">⚙</button>
+    <button class="btn btn-sm btn-outline-secondary p-0" id="catGearBtn" data-bs-toggle="modal" data-bs-target="#categoriesModal" style="width:22px;height:22px;font-size:.7rem;line-height:1;border-radius:4px" title="Manage printer types">⚙</button>
+    <div style="width:1px;height:16px;background:#2a2d3e"></div>
+    <span style="font-size:.82rem;color:#fff;font-weight:500">Format:</span>
+    <button class="btn btn-sm filter-btn active" data-format-filter="all">All</button>
+    <span id="formatFilterBtns" class="d-flex gap-2 flex-wrap"></span>
     <div style="width:1px;height:16px;background:#2a2d3e"></div>
     <button class="btn btn-sm filter-btn" id="filterMine" data-origin="my-design">✏ Mine</button>
     <div class="ms-2 d-flex align-items-center gap-2">
       <input type="search" class="form-control form-control-sm" id="searchBox" placeholder="Search..." style="width:180px">
     </div>
     <div class="d-flex gap-1 ms-2">
-      <button class="btn btn-sm layout-btn" id="layoutGrid" title="Grid view">⊞</button>
       <button class="btn btn-sm layout-btn active" id="layoutDetail" title="Detail view">☰</button>
+      <button class="btn btn-sm layout-btn" id="layoutGrid" title="Grid view">⊞</button>
     </div>
     <span class="ms-auto text-muted small" id="countLabel"></span>
   </div>
@@ -192,10 +199,12 @@
       <div class="modal-header py-2 px-3">
         <div>
           <h6 class="modal-title fw-semibold mb-0" id="modTitle"></h6>
-          <span class="badge rounded-pill mt-1" id="modCatBadge"></span>
+          <div class="d-flex gap-1 flex-wrap mt-1" id="modCatBadge"></div>
         </div>
-        <button class="btn btn-sm btn-outline-secondary me-2" id="copyPathBtn" onclick="copyModPath()" title="Copy folder path — paste into OrcaSlicer's save dialog to store your project here">📋</button>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+          <button class="btn btn-sm btn-outline-secondary" id="copyPathBtn" onclick="copyModPath()" title="Copy folder path — paste into OrcaSlicer's save dialog to store your project here">📋</button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
       </div>
       <div class="modal-body px-3 py-3">
         <canvas id="viewer"></canvas>
@@ -226,19 +235,27 @@
         </div>
 
         <div class="row g-2 mt-3">
+          <div class="col-sm-6">
+            <label class="form-label mb-1" style="font-size:.75rem;color:#aaa">Printer Type</label>
+            <div id="printerTypeToggles" class="d-flex gap-1 flex-wrap"></div>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label mb-1" style="font-size:.75rem;color:#aaa">File Formats</label>
+            <div id="modFileFormats" class="d-flex gap-1 flex-wrap"></div>
+          </div>
           <div class="col-sm-4">
-            <label class="form-label small text-muted mb-1">Status</label>
+            <label class="form-label mb-1" style="font-size:.75rem;color:#aaa">Status</label>
             <select class="form-select form-select-sm" id="statusSelect"></select>
           </div>
           <div class="col-sm-4">
-            <label class="form-label small text-muted mb-1">Origin</label>
+            <label class="form-label mb-1" style="font-size:.75rem;color:#aaa">Origin</label>
             <select class="form-select form-select-sm" id="originSelect">
               <option value="downloaded">↓ Downloaded</option>
               <option value="my-design">✏ My Design</option>
             </select>
           </div>
           <div class="col-12">
-            <label class="form-label small text-muted mb-1">Source URL</label>
+            <label class="form-label mb-1" style="font-size:.75rem;color:#aaa">Source URL</label>
             <div class="input-group input-group-sm">
               <input type="url" class="form-control" id="sourceUrl" placeholder="https://www.printables.com/...">
               <a id="sourceLink" href="#" target="_blank" class="btn btn-outline-secondary" style="display:none">&#8599;</a>
@@ -246,12 +263,12 @@
           </div>
         </div>
         <div class="mt-2">
-          <label class="form-label small text-muted mb-1">Notes</label>
+          <label class="form-label mb-1" style="font-size:.75rem;color:#aaa">Notes</label>
           <textarea class="form-control form-control-sm" id="notesArea" rows="2" placeholder="Print settings, observations, what worked..."></textarea>
         </div>
       </div>
       <div class="modal-footer py-2 px-3">
-        <button class="btn btn-sm btn-primary" id="saveBtn">Save</button>
+        <button class="btn btn-sm btn-primary" id="saveBtn">Save &amp; Close</button>
       </div>
     </div>
   </div>
@@ -587,7 +604,8 @@ function loadFile(category, name, filename) {
 // ── App state ──────────────────────────────────────────────────────────────
 let allMods = [];
 let activeMod = null;
-let activeFilter = 'all';
+let activePrinterFilter = 'all';
+let activeFormatFilter = 'all';
 let activeOriginFilter = '';
 let searchQuery = '';
 let activeLayout = 'detail';
@@ -647,7 +665,16 @@ function renderCatFilters() {
   const container = document.getElementById('catFilterBtns');
   if (!container) return;
   container.innerHTML = CATEGORIES.map(c =>
-    `<button class="btn btn-sm filter-btn${activeFilter === c.id ? ' active' : ''}" data-filter="${c.id}">${c.label}</button>`
+    `<button class="btn btn-sm filter-btn${activePrinterFilter === c.id ? ' active' : ''}" data-printer-filter="${c.id}">${c.label}</button>`
+  ).join('');
+}
+
+function renderFormatFilters() {
+  const container = document.getElementById('formatFilterBtns');
+  if (!container) return;
+  const formats = [...new Set(allMods.flatMap(m => m.file_formats || []))].sort();
+  container.innerHTML = formats.map(f =>
+    `<button class="btn btn-sm filter-btn${activeFormatFilter === f ? ' active' : ''}" data-format-filter="${f}">${f}</button>`
   ).join('');
 }
 
@@ -659,12 +686,14 @@ function sBadgeStyle(id) { const c = sColor(id); return `background:${c}22;color
 async function loadMods() {
   const r = await fetch('/api/mods');
   allMods = await r.json();
+  renderFormatFilters();
   renderCards();
 }
 
 function visibleMods() {
   return allMods.filter(m => {
-    if (activeFilter !== 'all' && m.category !== activeFilter) return false;
+    if (activePrinterFilter !== 'all' && !(m.printer_types || []).includes(activePrinterFilter)) return false;
+    if (activeFormatFilter !== 'all' && !(m.file_formats || []).includes(activeFormatFilter)) return false;
     if (activeOriginFilter && m.origin !== activeOriginFilter) return false;
     if (searchQuery && !m.name.includes(searchQuery.toLowerCase())) return false;
     return true;
@@ -695,11 +724,11 @@ function renderCards() {
         const _collapsed = _collapsedSections.has(_sid);
         if (_lastStatus !== null) _parts.push('</div>');
         _parts.push(`<div style="display:flex;align-items:center;gap:8px;padding:6px 2px;margin-top:${_lastStatus?'10px':'0'};cursor:pointer" onclick="toggleDetailSection('${_sid}',this)">
+          <span class="detail-section-toggle" style="color:#555;font-size:.7rem">${_collapsed ? '▶' : '▼'}</span>
           <span class="status-dot" style="background:${_sc}"></span>
           <span style="color:${_sc};font-size:.76rem;font-weight:600;letter-spacing:.04em">${sLabel(m.status)}</span>
+          <span style="color:#fff;font-size:.76rem;font-weight:600">${_cnt}</span>
           <span style="flex:1;height:1px;background:#1e2030"></span>
-          <span style="color:#444;font-size:.72rem">${_cnt}</span>
-          <span class="detail-section-toggle">${_collapsed ? '▶' : '▼'}</span>
         </div>
         <div class="detail-section-body${_collapsed ? ' collapsed' : ''}" data-section="${_sid}">`);
         _lastStatus = m.status;
@@ -716,11 +745,20 @@ function renderCards() {
         <div style="flex:1;min-width:0">
           <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
             <span class="fw-semibold" style="color:#fff;font-size:.95rem;word-break:break-word">${m.name}</span>
-            ${catBadgeHtml(m.category)}
             <span class="badge rounded-pill" style="${sBadgeStyle(m.status)}">${sLabel(m.status)}</span>
             ${m.origin === 'my-design' ? `<span class="badge badge-origin-mine rounded-pill">✏ Mine</span>` : ''}
             ${m.pdf_files && m.pdf_files.length ? `<span class="badge badge-pdf rounded-pill">PDF</span>` : ''}
             ${m.source_url ? `<a href="${m.source_url}" target="_blank" class="ms-auto text-muted small" style="text-decoration:none;white-space:nowrap" onclick="event.stopPropagation()">Source ↗</a>` : ''}
+          </div>
+          <div class="d-flex gap-3 flex-wrap mb-1">
+            ${(m.printer_types||[]).length ? `<div class="d-flex align-items-center gap-1">
+              <span style="font-size:.65rem;color:#555;white-space:nowrap">Printer Type</span>
+              ${(m.printer_types||[]).map(t=>catBadgeHtml(t)).join('')}
+            </div>` : ''}
+            ${(m.file_formats||[]).length ? `<div class="d-flex align-items-center gap-1">
+              <span style="font-size:.65rem;color:#555;white-space:nowrap">File Format</span>
+              ${(m.file_formats||[]).map(f=>`<span class="badge rounded-pill" style="background:#1a1d27;color:#555;border:1px solid #2a2d3e;font-size:.65rem">${f}</span>`).join('')}
+            </div>` : ''}
           </div>
           ${m.notes ? `<div class="text-muted mb-1" style="font-size:.8rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${m.notes}</div>` : ''}
           ${m.files.length ? `<div class="file-thumb-strip">${m.files.map(f => {
@@ -738,7 +776,7 @@ function renderCards() {
             </div>`;
           }).join('')}</div>` : ''}
         </div>
-        ${m2.needs_thumbs ? `<button class="btn-render-thumb" onclick="event.stopPropagation();generateModThumbs(event,'${m2.category}','${m2.name}')" title="Generate thumbnails for this mod">⟳ Render</button>` : ''}
+        ${m2.needs_thumbs ? `<button class="btn-render-thumb" onclick="event.stopPropagation();generateModThumbs(event,'${m2.name}')" title="Generate thumbnails for this mod">⟳ Render</button>` : ''}
       </div>`;
       })());
     });
@@ -755,7 +793,8 @@ function renderCards() {
           <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
             <span class="status-dot" style="${sDotStyle(m.status)}"></span>
             <span class="badge rounded-pill" style="${sBadgeStyle(m.status)}">${sLabel(m.status)}</span>
-            ${catBadgeHtml(m.category)}
+            ${(m.printer_types||[]).map(t=>catBadgeHtml(t)).join('')}
+            ${(m.file_formats||[]).map(f=>`<span class="badge rounded-pill" style="background:#1a1d27;color:#555;border:1px solid #2a2d3e;font-size:.65rem">${f}</span>`).join('')}
             ${m.origin === 'my-design' ? `<span class="badge badge-origin-mine rounded-pill">✏ Mine</span>` : ''}
             ${m.pdf_files && m.pdf_files.length ? `<span class="badge badge-pdf rounded-pill">PDF</span>` : ''}
             <span class="ms-auto text-muted" style="font-size:.75rem">${m.files.length} file${m.files.length !== 1 ? 's' : ''}</span>
@@ -768,14 +807,23 @@ function renderCards() {
   }
 }
 
-// Filter buttons (delegated so dynamic category buttons work)
+// Filter buttons (delegated so dynamic buttons work)
 document.getElementById('filterRow').addEventListener('click', e => {
-  const btn = e.target.closest('[data-filter].filter-btn');
-  if (!btn) return;
-  document.querySelectorAll('[data-filter].filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  activeFilter = btn.dataset.filter;
-  renderCards();
+  const pb = e.target.closest('[data-printer-filter].filter-btn');
+  if (pb) {
+    document.querySelectorAll('[data-printer-filter].filter-btn').forEach(b => b.classList.remove('active'));
+    pb.classList.add('active');
+    activePrinterFilter = pb.dataset.printerFilter;
+    renderCards();
+    return;
+  }
+  const fb = e.target.closest('[data-format-filter].filter-btn');
+  if (fb) {
+    document.querySelectorAll('[data-format-filter].filter-btn').forEach(b => b.classList.remove('active'));
+    fb.classList.add('active');
+    activeFormatFilter = fb.dataset.formatFilter;
+    renderCards();
+  }
 });
 
 document.getElementById('searchBox').addEventListener('input', e => {
@@ -825,7 +873,7 @@ window.snapToThreshold = function() {
   _docsSetWidth(w);
 };
 
-window.generateModThumbs = async function(e, category, name) {
+window.generateModThumbs = async function(e, name) {
   const btn = e.currentTarget;
   const row = btn.closest('.detail-row');
   btn.disabled = true;
@@ -1137,12 +1185,21 @@ function renderFileList(fn) {
 window.openMod = function(i) {
   activeMod = allMods[i];
   document.getElementById('modTitle').textContent = activeMod.name;
-  const catBadge = document.getElementById('modCatBadge');
-  const _ce = CAT_MAP[activeMod.category];
-  const _cc = _ce ? _ce.color : '#888';
-  catBadge.textContent = _ce ? _ce.label : activeMod.category;
-  catBadge.className = 'badge rounded-pill mt-1';
-  catBadge.style.cssText = `background:${_cc}22;color:${_cc};font-size:.68rem`;
+  document.getElementById('modCatBadge').innerHTML = (activeMod.printer_types||[]).map(t=>catBadgeHtml(t)).join('');
+
+  // Printer type toggles
+  const _pt = activeMod.printer_types || [];
+  document.getElementById('printerTypeToggles').innerHTML = CATEGORIES.map(c => {
+    const on = _pt.includes(c.id);
+    return `<button class="btn btn-sm printer-type-toggle${on?' active':''}" data-type="${c.id}"
+      style="border:1px solid ${on?c.color:'#2a2d3e'};color:${on?c.color:'#666'};background:${on?c.color+'22':'transparent'};font-size:.75rem;padding:2px 8px"
+      onclick="togglePrinterType(this,'${c.id}','${c.color}')">${c.label}</button>`;
+  }).join('');
+
+  // File formats (read-only, auto-detected)
+  document.getElementById('modFileFormats').innerHTML = (activeMod.file_formats||[])
+    .map(f=>`<span class="badge rounded-pill" style="background:#1a1d27;color:#666;border:1px solid #2a2d3e;font-size:.68rem">${f}</span>`)
+    .join('') || '<span style="color:#444;font-size:.75rem">none</span>';
   const sel = document.getElementById('statusSelect');
   sel.innerHTML = STATUSES.map(s => `<option value="${s.id}"${activeMod.status === s.id ? ' selected' : ''}>${s.label}</option>`).join('');
   document.getElementById('originSelect').value = activeMod.origin || 'downloaded';
@@ -1261,24 +1318,34 @@ document.getElementById('sourceUrl').addEventListener('input', function() {
   else { link.style.display = 'none'; }
 });
 
+window.togglePrinterType = function(btn, type, color) {
+  btn.classList.toggle('active');
+  const on = btn.classList.contains('active');
+  btn.style.borderColor = on ? color : '#2a2d3e';
+  btn.style.color       = on ? color : '#666';
+  btn.style.background  = on ? color + '22' : 'transparent';
+  autoSave();
+};
+
 async function _doSave() {
   if (!activeMod) return;
-  // Start with existing notes so non-active variant notes are preserved
   const fileNotes = { ...(activeMod.file_notes || {}) };
   document.querySelectorAll('.file-needed-sel').forEach(sel => {
     const f    = sel.dataset.file;
     const note = (document.querySelector(`.file-note-in[data-file="${f}"]`)?.value || '').trim();
     fileNotes[f] = { needed: sel.value, note };
   });
+  const printerTypes = [...document.querySelectorAll('#printerTypeToggles .printer-type-toggle.active')].map(b => b.dataset.type);
   await fetch(`/api/mods/${encodeURIComponent(activeMod.name)}/meta`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      status:     document.getElementById('statusSelect').value,
-      notes:      document.getElementById('notesArea').value,
-      source_url: document.getElementById('sourceUrl').value,
-      origin:     document.getElementById('originSelect').value,
-      file_notes: fileNotes,
+      status:        document.getElementById('statusSelect').value,
+      notes:         document.getElementById('notesArea').value,
+      source_url:    document.getElementById('sourceUrl').value,
+      origin:        document.getElementById('originSelect').value,
+      file_notes:    fileNotes,
+      printer_types: printerTypes,
     }),
   });
 }
@@ -1725,7 +1792,7 @@ loadStatuses().then(() => loadMods());
   <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
     <div class="modal-content">
       <div class="modal-header py-2 px-3">
-        <h6 class="modal-title fw-semibold mb-0">Manage Categories</h6>
+        <h6 class="modal-title fw-semibold mb-0">Manage Printer Types</h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body px-3 py-3">

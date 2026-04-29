@@ -19,6 +19,11 @@ if not exist "_app\venv_win\Scripts\python.exe" (
     goto :done
 )
 
+:: Kill any leftover process already on port 5000
+for /f "tokens=5" %%p in ('netstat -ano 2^>nul ^| findstr ":5000 " ^| findstr "LISTENING"') do (
+    taskkill /PID %%p /F >nul 2>&1
+)
+
 echo.
 echo  Starting 3D Print Library...
 echo  The site will open in your browser shortly.
@@ -27,7 +32,7 @@ echo  A tray icon will appear in your system tray.
 echo  You can minimize this window - closing it will stop the server.
 echo.
 
-_app\venv_win\Scripts\python.exe _app\app.py
+_app\venv_win\Scripts\python.exe -B _app\app.py
 
 :done
 if "%PUSHED%"=="1" popd
