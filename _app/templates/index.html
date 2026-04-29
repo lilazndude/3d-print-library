@@ -135,7 +135,8 @@
 <div id="topBar"></div>
 <div id="topBarGlow"></div>
 
-<div class="container-fluid py-4 px-4" style="max-width:1600px">
+<div id="stickyHeader" style="position:sticky;top:0;z-index:100;background:#0f1117;border-bottom:1px solid #1e2030;padding:12px 24px 10px">
+  <div style="max-width:1600px;margin:0 auto">
   <div class="d-flex align-items-start justify-content-between mb-3">
     <div class="d-flex align-items-center gap-3">
       <h4 class="mb-0 fw-bold">3D Print Library</h4>
@@ -168,7 +169,7 @@
   </div>
   <div id="genStatus" class="text-muted small mb-2" style="display:none"></div>
 
-  <div id="filterRow" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <div id="filterRow" class="d-flex gap-2 flex-wrap align-items-center">
     <span style="font-size:.82rem;color:#fff;font-weight:500">Printer:</span>
     <button class="btn btn-sm filter-btn active" data-printer-filter="all">All</button>
     <span id="catFilterBtns" class="d-flex gap-2 flex-wrap"></span>
@@ -188,8 +189,15 @@
     </div>
     <span class="ms-auto text-muted small" id="countLabel"></span>
   </div>
+  </div>
+</div>
 
+<div class="container-fluid px-4 pt-3 pb-5" style="max-width:1600px">
   <div class="row g-3" id="cards"></div>
+  <div class="text-center mt-5 pb-3">
+    <a href="https://github.com/lilazndude/3d-print-library" target="_blank" style="color:#2a2d3e;font-size:.75rem;text-decoration:none">github.com/lilazndude/3d-print-library</a>
+  </div>
+</div>
 </div>
 
 <!-- Mod detail modal -->
