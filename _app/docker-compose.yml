@@ -8,7 +8,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ${LIBRARY_HOST_PATH:-/media/CONFIG/3D_Printing/repo}:/library
+      - ${LIBRARY_HOST_PATH:-/home/lilazndude/3D Printing}:/library
     environment:
       - LIBRARY_ROOT=/library
     restart: unless-stopped

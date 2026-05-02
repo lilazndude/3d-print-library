@@ -282,9 +282,14 @@
           <label class="form-label mb-1" style="font-size:.75rem;color:#aaa">Notes</label>
           <textarea class="form-control form-control-sm" id="notesArea" rows="2" placeholder="Print settings, observations, what worked..."></textarea>
         </div>
+        <div class="mt-2">
+          <label class="form-label mb-1" style="font-size:.75rem;color:#aaa">Tags <span style="color:#444;font-weight:400">— comma separated, searchable</span></label>
+          <input type="text" class="form-control form-control-sm" id="modTags" placeholder="e.g. star wars, figurine, multi-part">
+        </div>
       </div>
       <div class="modal-footer py-2 px-3">
         <button class="btn btn-sm btn-outline-danger me-auto" id="deleteModBtn" onclick="deleteMod()">Delete</button>
+        <a class="btn btn-sm btn-outline-secondary" id="exportModBtn" href="#" target="_blank" title="Download needed files as ZIP">⬇ Export</a>
         <button class="btn btn-sm btn-primary" id="saveBtn">Save &amp; Close</button>
       </div>
     </div>
@@ -714,7 +719,15 @@ function visibleMods() {
     if (activeFormatFilter !== 'all' && !(m.file_formats || []).includes(activeFormatFilter)) return false;
     if (activeOriginFilter && m.origin !== activeOriginFilter) return false;
     if (activeNewFilter && !m.newly_imported) return false;
-    if (searchQuery && !m.name.includes(searchQuery.toLowerCase())) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const hit = m.name.includes(q)
+        || (m.display_name && m.display_name.toLowerCase().includes(q))
+        || (m.notes && m.notes.toLowerCase().includes(q))
+        || (m.tags || []).some(t => t.toLowerCase().includes(q))
+        || (m.files || []).some(f => f.toLowerCase().includes(q));
+      if (!hit) return false;
+    }
     return true;
   });
 }
@@ -1215,6 +1228,7 @@ function renderFileList(fn) {
 window.openMod = function(i) {
   activeMod = allMods[i];
   document.getElementById('modTitle').textContent = activeMod.display_name || activeMod.name;
+  document.getElementById('exportModBtn').href = `/api/mods/${encodeURIComponent(activeMod.name)}/export`;
   document.getElementById('modCatBadge').innerHTML = (activeMod.printer_types||[]).map(t=>catBadgeHtml(t)).join('');
   const _dn = document.getElementById('modDisplayName');
   _dn.value = activeMod.display_name || '';
@@ -1250,6 +1264,7 @@ window.openMod = function(i) {
   sel.innerHTML = STATUSES.map(s => `<option value="${s.id}"${activeMod.status === s.id ? ' selected' : ''}>${s.label}</option>`).join('');
   document.getElementById('originSelect').value = activeMod.origin || 'downloaded';
   document.getElementById('notesArea').value = activeMod.notes;
+  document.getElementById('modTags').value = (activeMod.tags || []).join(', ');
   document.getElementById('sourceUrl').value = activeMod.source_url;
 
   const link = document.getElementById('sourceLink');
@@ -1396,6 +1411,7 @@ async function _doSave() {
     body: JSON.stringify({
       display_name:     document.getElementById('modDisplayName').value.trim(),
       newly_imported:   false,
+      tags:             document.getElementById('modTags').value.split(',').map(t=>t.trim()).filter(Boolean),
       status:        document.getElementById('statusSelect').value,
       notes:         document.getElementById('notesArea').value,
       source_url:    document.getElementById('sourceUrl').value,
@@ -1455,7 +1471,7 @@ document.getElementById('modModal').addEventListener('change', e => {
   }
 });
 document.getElementById('modModal').addEventListener('input', e => {
-  if (e.target.matches('#notesArea, #sourceUrl, #modDisplayName, .file-note-in')) autoSave();
+  if (e.target.matches('#notesArea, #sourceUrl, #modDisplayName, #modTags, .file-note-in')) autoSave();
 });
 
 document.getElementById('saveBtn').addEventListener('click', async () => {

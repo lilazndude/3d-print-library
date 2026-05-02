@@ -308,6 +308,7 @@ def mod_info(mod_dir):
         'display_name': meta.get('display_name', ''),
         'needs_display_name': meta.get('needs_display_name', False) and not meta.get('display_name'),
         'newly_imported': meta.get('newly_imported', False),
+        'tags': meta.get('tags', []),
     }
 
 @app.route('/api/version')
