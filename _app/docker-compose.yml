@@ -2,13 +2,12 @@ name: 3d-print-library
 
 services:
   app:
-    build: .
-    image: 3d-print-library:latest
+    image: ghcr.io/lilazndude/3d-print-library:latest
     container_name: 3d-print-library
     ports:
       - "5000:5000"
     volumes:
-      - ${LIBRARY_HOST_PATH:-/home/lilazndude/3D Printing}:/library
+      - /home/lilazndude/3D Printing/repo:/library
     environment:
       - LIBRARY_ROOT=/library
     restart: unless-stopped
