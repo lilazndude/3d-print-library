@@ -129,6 +129,43 @@
   .file-thumb-img:hover { border-color:#4f7fff; }
   .file-thumb-ph { width:72px; height:72px; border-radius:5px; background:#080a10; border:1px solid #2a2d3e; display:flex; align-items:center; justify-content:center; color:#2a2d3e; font-size:1.1rem; }
   .file-thumb-label { font-family:monospace; font-size:.61rem; color:#555; margin-top:3px; width:72px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  @media (max-width: 576px) {
+    /* Top bar — hide non-essential items */
+    #generateBtn, .slicer-icon, .text-muted.me-1[style*="font-size:.68rem"] { display:none !important; }
+
+    /* Tighten header padding */
+    #stickyHeader { padding:8px 12px 8px !important; }
+    .container-fluid { padding-left:12px !important; padding-right:12px !important; }
+
+    /* Smaller detail thumbnails so content has more room */
+    .detail-thumb, .detail-thumb-placeholder { width:56px !important; height:56px !important; }
+
+    /* Bigger touch targets for filter buttons */
+    .filter-btn, .layout-btn { padding:5px 10px !important; font-size:.8rem !important; }
+
+    /* File thumbs slightly smaller on mobile */
+    .file-thumb-img, .file-thumb-ph { width:60px !important; height:60px !important; }
+    .file-thumb-label { width:60px !important; }
+
+    /* Compact mod cards */
+    .detail-row { padding:8px !important; gap:8px !important; }
+
+    /* Reduce badge font size less aggressively */
+    .badge { font-size:.65rem !important; }
+
+    /* Search box full width */
+    #searchBox { width:100% !important; }
+
+    /* Filter row: smaller gap */
+    #filterRow { gap:6px !important; }
+
+    /* Top bar buttons smaller */
+    .btn-sm { padding:3px 8px !important; font-size:.75rem !important; }
+
+    /* Grid cards: 1 column on very small screens */
+    .col-6 { flex:0 0 100% !important; max-width:100% !important; }
+  }
 </style>
 </head>
 <body>
@@ -137,7 +174,7 @@
 
 <div id="stickyHeader" style="position:sticky;top:0;z-index:100;background:#0f1117;border-bottom:1px solid #1e2030;padding:12px 24px 10px">
   <div style="max-width:1600px;margin:0 auto">
-  <div class="d-flex align-items-start justify-content-between mb-3">
+  <div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
     <div class="d-flex align-items-center gap-3">
       <h4 class="mb-0 fw-bold">3D Print Library</h4>
       <div id="watch-indicator" class="small" style="display:none;cursor:pointer;color:#14b8a6;font-weight:500" title="Watch folder active" onclick="showWatchInfo()">📂 <span id="watch-label">0 auto-imported</span></div>
@@ -151,9 +188,9 @@
         <span class="slicer-icon" id="icon-bambu"    title="Bambu Studio — not detected (set BAMBU_PATH)">Bambu</span>
         <span class="slicer-icon" id="icon-creality" title="Creality Print — not detected (set CREALITY_PATH)">Cr.</span>
       </div>
-      <button class="btn btn-sm btn-outline-secondary admin-only" id="generateBtn">Generate Thumbnails</button>
-      <button class="btn btn-sm btn-outline-secondary admin-only" data-bs-toggle="modal" data-bs-target="#statusesModal">⚙ Statuses</button>
-      <button class="btn btn-sm btn-outline-primary admin-only" data-bs-toggle="modal" data-bs-target="#importModal">+ Import Zip</button>
+      <button class="btn btn-sm btn-outline-secondary" id="generateBtn">Generate Thumbnails</button>
+      <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#statusesModal">⚙ Statuses</button>
+      <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importModal">+ Import Zip</button>
     </div>
   </div>
 
@@ -173,7 +210,7 @@
     <span style="font-size:.82rem;color:#fff;font-weight:500">Printer:</span>
     <button class="btn btn-sm filter-btn active" data-printer-filter="all">All</button>
     <span id="catFilterBtns" class="d-flex gap-2 flex-wrap"></span>
-    <button class="btn btn-sm btn-outline-secondary p-0 admin-only" id="catGearBtn" data-bs-toggle="modal" data-bs-target="#categoriesModal" style="width:22px;height:22px;font-size:.7rem;line-height:1;border-radius:4px" title="Manage printer types">⚙</button>
+    <button class="btn btn-sm btn-outline-secondary p-0" id="catGearBtn" data-bs-toggle="modal" data-bs-target="#categoriesModal" style="width:22px;height:22px;font-size:.7rem;line-height:1;border-radius:4px" title="Manage printer types">⚙</button>
     <div style="width:1px;height:16px;background:#2a2d3e"></div>
     <span style="font-size:.82rem;color:#fff;font-weight:500">Format:</span>
     <button class="btn btn-sm filter-btn active" data-format-filter="all">All</button>
@@ -195,16 +232,15 @@
 
 <div class="container-fluid px-4 pt-3 pb-5" style="max-width:1600px">
   <div class="row g-3" id="cards"></div>
-  <div class="text-center mt-5 pb-3 d-flex align-items-center justify-content-center gap-3">
+  <div class="text-center mt-5 pb-3">
     <a href="https://github.com/lilazndude/3d-print-library" target="_blank" style="color:#2a2d3e;font-size:.75rem;text-decoration:none">github.com/lilazndude/3d-print-library</a>
-    <button id="lockBtn" onclick="openPinModal()" style="background:none;border:none;color:#2a2d3e;font-size:.85rem;cursor:pointer;padding:0;line-height:1" title="Admin access">🔒</button>
   </div>
 </div>
 </div>
 
 <!-- Mod detail modal -->
 <div class="modal fade" id="modModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down">
     <div class="modal-content">
       <div class="modal-header py-2 px-3">
         <div style="flex:1;min-width:0;margin-right:8px">
@@ -289,9 +325,9 @@
         </div>
       </div>
       <div class="modal-footer py-2 px-3">
-        <button class="btn btn-sm btn-outline-danger me-auto admin-only" id="deleteModBtn" onclick="deleteMod()">Delete</button>
+        <button class="btn btn-sm btn-outline-danger me-auto" id="deleteModBtn" onclick="deleteMod()">Delete</button>
         <a class="btn btn-sm btn-outline-secondary" id="exportModBtn" href="#" target="_blank" title="Download needed files as ZIP">⬇ Export</a>
-        <button class="btn btn-sm btn-primary admin-only" id="saveBtn">Save &amp; Close</button>
+        <button class="btn btn-sm btn-primary" id="saveBtn">Save &amp; Close</button>
       </div>
     </div>
   </div>
@@ -1861,96 +1897,6 @@ _initSlicerIcon('/api/creality', 'icon-creality', 'Creality Print','CREALITY_PAT
 
 loadStatuses().then(() => loadMods());
 
-// ── Auth / PIN ─────────────────────────────────────────────────────────────
-let _isAdmin = true;
-
-function _applyAdminState(admin) {
-  _isAdmin = admin;
-  const lockBtn = document.getElementById('lockBtn');
-  document.querySelectorAll('.admin-only').forEach(el => {
-    el.style.display = admin ? '' : 'none';
-  });
-  if (lockBtn) lockBtn.textContent = admin ? '🔓' : '🔒';
-}
-
-async function checkAuth() {
-  try {
-    const d = await fetch('/api/auth/status').then(r => r.json());
-    _applyAdminState(d.admin);
-    const lockBtn = document.getElementById('lockBtn');
-    if (lockBtn) lockBtn.style.display = d.protected ? '' : 'none';
-  } catch(e) {}
-}
-
-window.openPinModal = function() {
-  const modal = new bootstrap.Modal(document.getElementById('pinModal'));
-  document.getElementById('pinModalBody').style.display = '';
-  document.getElementById('pinAdminBody').style.display = 'none';
-  document.getElementById('pinSetBody').style.display = 'none';
-  document.getElementById('pinModalFooter').style.display = '';
-  document.getElementById('pinSubmitBtn').textContent = 'Unlock';
-  document.getElementById('pinSubmitBtn').onclick = submitPin;
-  document.getElementById('pinModalTitle').textContent = _isAdmin ? 'Admin Options' : 'Admin Access';
-  document.getElementById('pinError').style.display = 'none';
-  document.getElementById('pinInput').value = '';
-  if (_isAdmin) {
-    document.getElementById('pinModalBody').style.display = 'none';
-    document.getElementById('pinAdminBody').style.display = '';
-    document.getElementById('pinModalFooter').style.display = 'none';
-  }
-  modal.show();
-  setTimeout(() => document.getElementById('pinInput').focus(), 300);
-};
-
-window.submitPin = async function() {
-  const pin = document.getElementById('pinInput').value;
-  const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin}) });
-  if (r.ok) {
-    _applyAdminState(true);
-    bootstrap.Modal.getInstance(document.getElementById('pinModal')).hide();
-  } else {
-    document.getElementById('pinError').style.display = '';
-  }
-};
-
-window.lockSession = async function() {
-  await fetch('/api/auth/logout', { method:'POST' });
-  _applyAdminState(false);
-  bootstrap.Modal.getInstance(document.getElementById('pinModal')).hide();
-};
-
-window.showSetPin = function() {
-  document.getElementById('pinAdminBody').style.display = 'none';
-  document.getElementById('pinSetBody').style.display = '';
-  document.getElementById('pinModalFooter').style.display = '';
-  document.getElementById('pinSubmitBtn').textContent = 'Save PIN';
-  document.getElementById('pinSubmitBtn').onclick = savePin;
-  document.getElementById('pinNewInput').value = '';
-  document.getElementById('pinConfirmInput').value = '';
-};
-
-window.savePin = async function() {
-  const pin = document.getElementById('pinNewInput').value.trim();
-  const confirm2 = document.getElementById('pinConfirmInput').value.trim();
-  const err = document.getElementById('pinSetError');
-  if (!pin) { err.textContent = 'PIN cannot be empty'; err.style.display = ''; return; }
-  if (pin !== confirm2) { err.textContent = 'PINs do not match'; err.style.display = ''; return; }
-  await fetch('/api/auth/set-pin', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin}) });
-  document.getElementById('lockBtn').style.display = '';
-  bootstrap.Modal.getInstance(document.getElementById('pinModal')).hide();
-};
-
-window.removePin = async function() {
-  if (!confirm('Remove PIN? The app will be fully open to anyone.')) return;
-  await fetch('/api/auth/set-pin', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pin:''}) });
-  _applyAdminState(true);
-  document.getElementById('lockBtn').style.display = 'none';
-  bootstrap.Modal.getInstance(document.getElementById('pinModal')).hide();
-};
-
-document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitPin(); });
-
-checkAuth();
 </script>
 
 <!-- Categories modal -->
@@ -2026,37 +1972,6 @@ checkAuth();
 </div>
 
 <div id="thumbFloat"><img id="thumbFloatImg" alt=""></div>
-
-<!-- PIN modal -->
-<div class="modal fade" id="pinModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:320px">
-    <div class="modal-content">
-      <div class="modal-header py-2 px-3">
-        <h6 class="modal-title fw-semibold mb-0" id="pinModalTitle">Admin Access</h6>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body px-3 py-3">
-        <div id="pinModalBody">
-          <input type="password" class="form-control form-control-sm mb-2" id="pinInput" placeholder="Enter PIN..." autocomplete="current-password">
-          <div id="pinError" class="text-danger small" style="display:none">Incorrect PIN</div>
-        </div>
-        <div id="pinAdminBody" style="display:none" class="d-flex flex-column gap-2">
-          <button class="btn btn-sm btn-outline-secondary" onclick="lockSession()">🔒 Lock session</button>
-          <button class="btn btn-sm btn-outline-secondary" onclick="showSetPin()">Change PIN</button>
-          <button class="btn btn-sm btn-outline-danger" onclick="removePin()">Remove PIN (disable protection)</button>
-        </div>
-        <div id="pinSetBody" style="display:none">
-          <input type="password" class="form-control form-control-sm mb-2" id="pinNewInput" placeholder="New PIN...">
-          <input type="password" class="form-control form-control-sm mb-2" id="pinConfirmInput" placeholder="Confirm PIN...">
-          <div id="pinSetError" class="text-danger small" style="display:none"></div>
-        </div>
-      </div>
-      <div class="modal-footer py-2 px-3" id="pinModalFooter">
-        <button class="btn btn-sm btn-primary" id="pinSubmitBtn" onclick="submitPin()">Unlock</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Docs slide-out panel -->
 <div id="docsBd"></div>

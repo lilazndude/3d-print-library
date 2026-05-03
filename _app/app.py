@@ -1,12 +1,9 @@
-from flask import Flask, render_template, jsonify, request, send_file, abort, session
-from functools import wraps
+from flask import Flask, render_template, jsonify, request, send_file, abort
 import json
 import subprocess
 import zipfile
 import shutil
 import threading
-import hashlib
-import secrets
 import sys
 from pathlib import Path
 
@@ -86,38 +83,6 @@ def _run_thumb_job(force):
 app = Flask(__name__)
 
 import os
-
-# ── Config (PIN, secret key) ───────────────────────────────────────────────
-def get_config():
-    p = Path(os.environ.get('LIBRARY_ROOT', str(Path(__file__).resolve().parent.parent))) / 'config.json'
-    if p.exists():
-        try: return json.loads(p.read_text())
-        except: pass
-    return {}
-
-def save_config(cfg):
-    p = Path(os.environ.get('LIBRARY_ROOT', str(Path(__file__).resolve().parent.parent))) / 'config.json'
-    p.write_text(json.dumps(cfg, indent=2))
-
-_cfg = get_config()
-if 'secret_key' not in _cfg:
-    _cfg['secret_key'] = secrets.token_hex(32)
-    save_config(_cfg)
-app.secret_key = _cfg['secret_key']
-
-def _is_protected():
-    return bool(get_config().get('pin_hash'))
-
-def _is_admin():
-    return not _is_protected() or bool(session.get('admin'))
-
-def require_admin(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not _is_admin():
-            abort(403)
-        return f(*args, **kwargs)
-    return decorated
 ROOT = Path(os.environ.get('LIBRARY_ROOT', str(Path(__file__).resolve().parent.parent)))
 MODELS = 'models'
 
@@ -344,6 +309,7 @@ def mod_info(mod_dir):
         'needs_display_name': meta.get('needs_display_name', False) and not meta.get('display_name'),
         'newly_imported': meta.get('newly_imported', False),
         'tags': meta.get('tags', []),
+        'private': meta.get('private', False),
     }
 
 @app.route('/api/version')
@@ -375,40 +341,6 @@ def api_debug():
         'mod_count': mod_count,
         'first_five': mod_names,
     })
-
-@app.route('/api/auth/status')
-def api_auth_status():
-    return jsonify({'protected': _is_protected(), 'admin': _is_admin()})
-
-@app.route('/api/auth/login', methods=['POST'])
-def api_auth_login():
-    pin = (request.json or {}).get('pin', '')
-    cfg = get_config()
-    stored = cfg.get('pin_hash')
-    if stored and hashlib.sha256(pin.encode()).hexdigest() == stored:
-        session['admin'] = True
-        return jsonify({'ok': True})
-    return jsonify({'ok': False, 'error': 'Wrong PIN'}), 401
-
-@app.route('/api/auth/logout', methods=['POST'])
-def api_auth_logout():
-    session.pop('admin', None)
-    return jsonify({'ok': True})
-
-@app.route('/api/auth/set-pin', methods=['POST'])
-def api_auth_set_pin():
-    if _is_protected() and not _is_admin():
-        abort(403)
-    pin = (request.json or {}).get('pin', '').strip()
-    cfg = get_config()
-    if pin:
-        cfg['pin_hash'] = hashlib.sha256(pin.encode()).hexdigest()
-        session['admin'] = True
-    else:
-        cfg.pop('pin_hash', None)
-        session.pop('admin', None)
-    save_config(cfg)
-    return jsonify({'ok': True})
 
 @app.route('/')
 def index():
@@ -477,7 +409,6 @@ def api_name_suggestions(name):
     return jsonify(_derive_name_suggestions(d))
 
 @app.route('/api/mods/<name>', methods=['DELETE'])
-@require_admin
 def api_delete_mod(name):
     d = ROOT / MODELS / name
     if not d.is_dir():
@@ -486,7 +417,6 @@ def api_delete_mod(name):
     return jsonify({'ok': True})
 
 @app.route('/api/mods/<name>/thumbnail', methods=['POST'])
-@require_admin
 def api_thumbnail_post(name):
     import base64
     d = ROOT / MODELS / name
@@ -516,7 +446,6 @@ def api_categories():
     return jsonify(result)
 
 @app.route('/api/categories', methods=['POST'])
-@require_admin
 def api_categories_save():
     cats = request.json
     if not isinstance(cats, list):
@@ -529,7 +458,6 @@ def api_statuses_get():
     return jsonify(get_statuses())
 
 @app.route('/api/statuses', methods=['POST'])
-@require_admin
 def api_statuses_save():
     statuses = request.json
     if not isinstance(statuses, list):
@@ -542,7 +470,6 @@ def api_file_statuses_get():
     return jsonify(get_file_statuses())
 
 @app.route('/api/file-statuses', methods=['POST'])
-@require_admin
 def api_file_statuses_save():
     statuses = request.json
     if not isinstance(statuses, list):
@@ -551,7 +478,6 @@ def api_file_statuses_save():
     return jsonify({'ok': True})
 
 @app.route('/api/mods/<name>/meta', methods=['POST'])
-@require_admin
 def api_update_meta(name):
     d = ROOT / MODELS / name
     if not d.is_dir():
@@ -614,7 +540,6 @@ def api_creality():
     return jsonify({'path': exe, 'found': exe is not None})
 
 @app.route('/api/import', methods=['POST'])
-@require_admin
 def api_import():
     f = request.files.get('file')
     if not f:
@@ -672,7 +597,6 @@ def _run_mod_thumb_job(name, mod_dir):
     _mod_thumb_job['running'] = False
 
 @app.route('/api/mods/<name>/generate-thumbnails', methods=['POST'])
-@require_admin
 def api_generate_mod_thumbs(name):
     global _mod_thumb_job
     if _mod_thumb_job['running']:
@@ -688,7 +612,6 @@ def api_generate_mod_thumbs_status(name):
     return jsonify(_mod_thumb_job)
 
 @app.route('/api/generate-thumbnails', methods=['POST'])
-@require_admin
 def api_start_thumb_job():
     global _thumb_job
     if _thumb_job['running']:
@@ -702,7 +625,6 @@ def api_thumb_job_status():
     return jsonify(_thumb_job)
 
 @app.route('/api/fetch-printables', methods=['POST'])
-@require_admin
 def api_fetch_printables():
     import re as _re, json as _json, urllib.request as _ur
     data     = request.json or {}
@@ -814,7 +736,6 @@ def api_fetch_printables():
                     'method': 'api', 'downloaded': downloaded, 'errors': errors})
 
 @app.route('/api/fetch-zip', methods=['POST'])
-@require_admin
 def api_fetch_zip():
     import re, urllib.request
     data = request.json
